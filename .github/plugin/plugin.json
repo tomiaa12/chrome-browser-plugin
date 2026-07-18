@@ -1,0 +1,11 @@
+{
+  "name": "chrome-mcp-figma-compare",
+  "version": "1.0.0",
+  "description": "Chrome 扩展 MCP 桥 + Figma↔页面比对 Skill（GitHub Copilot / VS Code Agent Plugin）。",
+  "author": {
+    "name": "tomiaa12",
+    "url": "https://github.com/tomiaa12"
+  },
+  "skills": "./skills/",
+  "mcpServers": ".mcp.json"
+}

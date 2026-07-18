@@ -1,0 +1,47 @@
+{
+  "name": "@chrome-mcp-figma-compare/mcp",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "MCP stdio server bridging Cursor/Copilot to Chrome extension via WebSocket",
+  "main": "dist/server.cjs",
+  "bin": {
+    "chrome-mcp-figma-compare": "./dist/server.cjs"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "node build.mjs",
+    "start": "node dist/server.cjs",
+    "prepublishOnly": "pnpm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomiaa12/chrome-mcp-figma-compare.git",
+    "directory": "mcp"
+  },
+  "homepage": "https://github.com/tomiaa12/chrome-mcp-figma-compare/tree/main/mcp",
+  "license": "MIT",
+  "keywords": [
+    "cursor",
+    "mcp",
+    "chrome",
+    "figma",
+    "copilot"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "ws": "^8.18.3",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

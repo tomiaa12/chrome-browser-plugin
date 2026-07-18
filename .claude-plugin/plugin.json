@@ -1,0 +1,20 @@
+{
+  "name": "chrome-mcp-figma-compare",
+  "version": "1.0.0",
+  "description": "Chrome 扩展 MCP 桥 + Figma↔页面比对 Skill。需配合 Chrome 扩展使用。",
+  "author": {
+    "name": "tomiaa12",
+    "url": "https://github.com/tomiaa12"
+  },
+  "homepage": "https://github.com/tomiaa12/chrome-mcp-figma-compare",
+  "repository": "https://github.com/tomiaa12/chrome-mcp-figma-compare",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "chrome",
+    "figma",
+    "copilot",
+    "design-review"
+  ],
+  "skills": "./skills/"
+}

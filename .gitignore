@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+mcp/node_modules/
+
+# Logs / debug
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editors / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temp / cache
+.tmp/
+tmp/
+*.tmp
+.cache/
+.turbo/
+coverage/
+/dist/
+build/
+# 保留打包后的 MCP 产物（零依赖可直接 node 运行）
+!mcp/dist/
+
+# Local Cursor plugin install copies (if any)
+.cursor/plugins/
