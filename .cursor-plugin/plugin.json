@@ -9,6 +9,7 @@
   "license": "MIT",
   "homepage": "https://github.com/tomiaa12/chrome-mcp-figma-compare",
   "repository": "https://github.com/tomiaa12/chrome-mcp-figma-compare",
+  "logo": "assets/logo.png",
   "keywords": [
     "mcp",
     "chrome",
