@@ -17,5 +17,10 @@ const code = fs.readFileSync(outfile, "utf8");
 if (!code.startsWith("#!")) {
   fs.writeFileSync(outfile, `#!/usr/bin/env node\n${code}`);
 }
+try {
+  fs.chmodSync(outfile, 0o755);
+} catch {
+  // Windows may ignore mode bits
+}
 
 console.log(`built ${outfile} (${fs.statSync(outfile).size} bytes)`);

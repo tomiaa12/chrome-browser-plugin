@@ -1,11 +1,11 @@
 {
-  "name": "@chrome-mcp-figma-compare/mcp",
-  "version": "1.0.0",
+  "name": "@tomiaa/chrome-mcp-figma-compare",
+  "version": "1.0.1",
   "type": "module",
   "description": "MCP stdio server bridging Cursor/Copilot to Chrome extension via WebSocket",
   "main": "dist/server.cjs",
   "bin": {
-    "chrome-mcp-figma-compare": "./dist/server.cjs"
+    "chrome-mcp-figma-compare": "dist/server.cjs"
   },
   "files": [
     "dist",
