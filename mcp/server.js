@@ -13,19 +13,71 @@ const REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 30000);
 /** @type {WebSocket | null} */
 let extensionSocket = null;
 
+/** @type {WebSocketServer | null} */
+let activeWss = null;
+
 /** 待插件回包的 requestId → Promise */
 const pendingRequests = new Map();
 
+let shuttingDown = false;
+
 // 必须写 stderr，不能污染 stdout
-function log(...args) {  console.error("[devtools-net-formatter-mcp]", ...args);
+function log(...args) {
+  console.error("[devtools-net-formatter-mcp]", ...args);
+}
+
+function closeWebSocketServer() {
+  const wss = activeWss;
+  activeWss = null;
+  if (!wss) return;
+
+  try {
+    for (const client of wss.clients) {
+      try {
+        client.terminate();
+      } catch (_) {
+        /* ignore */
+      }
+    }
+    wss.close();
+  } catch (_) {
+    /* ignore */
+  }
+
+  if (extensionSocket) {
+    try {
+      extensionSocket.terminate();
+    } catch (_) {
+      /* ignore */
+    }
+    extensionSocket = null;
+  }
+}
+
+/** Cursor 重启 MCP 时先关旧进程再起新进程；必须释放 9527，否则新实例 EADDRINUSE */
+function shutdown(reason) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log(`Shutting down (${reason})`);
+  closeWebSocketServer();
+  for (const [, pending] of pendingRequests) {
+    clearTimeout(pending.timer);
+    pending.reject(new Error(`MCP shutting down: ${reason}`));
+  }
+  pendingRequests.clear();
+  // 给 close 一点时间，再退出
+  setTimeout(() => process.exit(0), 50).unref?.();
 }
 
 /** 监听 9527，等待插件 background 连入；端口占用时重试，避免 Cursor 卡在旧 tool 列表 */
-function startWebSocketServer(retryLeft = 8) {
+function startWebSocketServer(retryLeft = 20) {
+  if (shuttingDown) return null;
+
   const wss = new WebSocketServer({
     host: WS_HOST,
     port: WS_PORT,
   });
+  activeWss = wss;
 
   wss.on("listening", () => {
     log(`WebSocket server listening on ws://${WS_HOST}:${WS_PORT}`);
@@ -97,18 +149,23 @@ function startWebSocketServer(retryLeft = 8) {
     const msg = error?.message || String(error);
     const code = error?.code;
     log("WebSocket server error:", msg);
+    if (activeWss === wss) {
+      activeWss = null;
+    }
     try {
       wss.close();
     } catch (_) {
       /* ignore */
     }
 
+    // Cursor 热重启时旧进程可能尚未释放端口；多等一会儿再抢
     if ((code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) && retryLeft > 0) {
+      const delayMs = Math.min(1500, 300 + (20 - retryLeft) * 100);
       log(
-        `Port ${WS_PORT} in use; retrying in 500ms (${retryLeft} left). ` +
-          `If this persists, Restart MCP after the previous instance exits.`,
+        `Port ${WS_PORT} in use; retrying in ${delayMs}ms (${retryLeft} left). ` +
+          `If this persists, kill the old node MCP process or set CHROME_MCP_WS_PORT.`,
       );
-      setTimeout(() => startWebSocketServer(retryLeft - 1), 500);
+      setTimeout(() => startWebSocketServer(retryLeft - 1), delayMs);
       return;
     }
 
@@ -214,7 +271,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_target_tab",
     {
       description:
-        "Get the pinned MCP target tab (set via extension panel 「设为 MCP 目标页」). Prefer this over get_active_tab for design comparison.",
+        "Get the pinned MCP target tab (set via extension panel 「设为 MCP 目标页」). Page tools require this to be set.",
       inputSchema: {},
     },
     async () => {
@@ -227,9 +284,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "set_target_tab",
     {
       description:
-        "Pin or clear the MCP target tab. Usually set from the extension panel; optional for AI.",
+        "Pin or clear the MCP target tab. Usually set from the extension panel「设为 MCP 目标页」; optional for AI. Page tools fail until pinned.",
       inputSchema: {
-        tabId: z.number().int().optional().describe("Tab id to pin"),
+        tabId: z.number().int().optional().describe("Tab id to pin; omit to pin current active tab"),
         clear: z.boolean().optional().describe("If true, clear pinned target"),
       },
     },
@@ -243,17 +300,16 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "run_automation",
     {
       description:
-        "Run Automation code in the MCP target tab (or active tab) MAIN world. Supports assertVisible/assertText (throws on failure).",
+        "Run Automation code in the pinned MCP target tab MAIN world. Requires「设为 MCP 目标页」first. Supports assertVisible/assertText (throws on failure).",
       inputSchema: {
         code: z.string().describe("Automation JS, e.g. await Automation.click('.btn')"),
-        tabId: z.number().int().optional().describe("Target tab id; default pinned MCP target, else active tab"),
         timeoutMs: z.number().int().optional().describe("MCP wait timeout, default 120000"),
       },
     },
-    async ({ code, tabId, timeoutMs }) => {
+    async ({ code, timeoutMs }) => {
       const data = await sendToExtension(
         "run_automation",
-        { code, tabId },
+        { code },
         { timeoutMs: timeoutMs || 120000 },
       );
       return toolText(data);
@@ -263,17 +319,17 @@ function createMcpServer() {  const mcpServer = new McpServer({
   mcpServer.registerTool(
     "screenshot_tab",
     {
-      description: "Capture full-page PNG screenshot of a tab (returns base64, may truncate).",
+      description:
+        "Capture full-page PNG of the pinned MCP target tab (returns base64, may truncate). Requires「设为 MCP 目标页」first.",
       inputSchema: {
-        tabId: z.number().int().optional(),
         maxBase64Length: z.number().int().optional().describe("Default 120000"),
         timeoutMs: z.number().int().optional().describe("Default 60000"),
       },
     },
-    async ({ tabId, maxBase64Length, timeoutMs }) => {
+    async ({ maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_tab",
-        { tabId, maxBase64Length },
+        { maxBase64Length },
         { timeoutMs: timeoutMs || 60000 },
       );
       return toolText(data);
@@ -284,19 +340,18 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "screenshot_design_width",
     {
       description:
-        "Capture full-page PNG at design width (default 375). If documentElement.offsetWidth !== 375, enables mobile design-size emulation first, then screenshots. Use for Figma vs page visual compare.",
+        "Capture full-page PNG of the pinned MCP target tab at design width (default 375). Requires「设为 MCP 目标页」first. If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
       inputSchema: {
-        tabId: z.number().int().optional(),
         width: z.number().int().optional().describe("Design width, default 375"),
         height: z.number().int().optional().describe("Design height, default 812"),
         maxBase64Length: z.number().int().optional().describe("Default 120000"),
         timeoutMs: z.number().int().optional().describe("Default 90000"),
       },
     },
-    async ({ tabId, width, height, maxBase64Length, timeoutMs }) => {
+    async ({ width, height, maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_design_width",
-        { tabId, width, height, maxBase64Length },
+        { width, height, maxBase64Length },
         { timeoutMs: timeoutMs || 90000 },
       );
       return toolText(data);
@@ -307,17 +362,16 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_dom_snapshot",
     {
       description:
-        "DOM snapshot of MCP target tab for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Ignores text content and font-family for diffs. Prefer after screenshot_design_width.",
+        "DOM snapshot of the pinned MCP target tab for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Requires「设为 MCP 目标页」first. Prefer after screenshot_design_width.",
       inputSchema: {
-        tabId: z.number().int().optional(),
         maxNodes: z.number().int().optional().describe("Default 120"),
         timeoutMs: z.number().int().optional().describe("Default 60000"),
       },
     },
-    async ({ tabId, maxNodes, timeoutMs }) => {
+    async ({ maxNodes, timeoutMs }) => {
       const data = await sendToExtension(
         "get_dom_snapshot",
-        { tabId, maxNodes },
+        { maxNodes },
         { timeoutMs: timeoutMs || 60000 },
       );
       return toolText(data);
@@ -328,11 +382,19 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "show_design_diffs",
     {
       description:
-        "Push Figma-vs-page diff JSON to the extension toolbox tab「Figma 比对」. Call after comparing Figma MCP + get_dom_snapshot. Pass diffs as an array of { selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }.",
+        "Push Figma-vs-page compare result to the Chrome extension: opens a popup on the pinned MCP target with sl-image-comparer (Figma vs page screenshots) + property diffs. Requires「设为 MCP 目标页」. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension popup — do NOT dump a markdown table in chat.",
       inputSchema: {
         pageUrl: z.string().optional(),
         figmaNodeId: z.string().optional(),
         figmaFileKey: z.string().optional(),
+        figmaImageBase64: z
+          .string()
+          .optional()
+          .describe("Figma frame screenshot base64 (from Figma get_screenshot); data: URL prefix optional"),
+        pageImageBase64: z
+          .string()
+          .optional()
+          .describe("Page screenshot base64 from screenshot_design_width.pngBase64"),
         diffs: z
           .array(z.record(z.any()))
           .describe(
@@ -341,7 +403,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
       },
     },
     async (args) => {
-      const data = await sendToExtension("show_design_diffs", args);
+      const data = await sendToExtension("show_design_diffs", args, {
+        timeoutMs: 60000,
+      });
       return toolText(data);
     },
   );
@@ -349,16 +413,15 @@ function createMcpServer() {  const mcpServer = new McpServer({
   mcpServer.registerTool(
     "get_network_requests",
     {
-      description: "Get cached fetch/XHR captures for a tab (from extension net capture).",
+      description:
+        "Get cached fetch/XHR captures for the pinned MCP target tab. Requires「设为 MCP 目标页」first.",
       inputSchema: {
-        tabId: z.number().int().optional(),
         urlPattern: z.string().optional().describe("Filter by URL substring"),
         limit: z.number().int().optional().describe("Default 50"),
       },
     },
-    async ({ tabId, urlPattern, limit }) => {
+    async ({ urlPattern, limit }) => {
       const data = await sendToExtension("get_network_requests", {
-        tabId,
         urlPattern,
         limit,
       });
@@ -377,6 +440,12 @@ async function main() {
   await mcpServer.connect(transport);
 
   log("MCP stdio server started");
+
+  // Cursor 关/重启 MCP：stdio 断开或发信号时立刻释放 9527
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.stdin.on("end", () => shutdown("stdin end"));
+  process.stdin.on("close", () => shutdown("stdin close"));
 }
 
 main().catch((error) => {

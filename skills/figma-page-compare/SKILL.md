@@ -12,7 +12,7 @@ description: >-
 依赖：
 
 1. 本插件提供的 MCP（`chrome-extension` / `ping`、`get_target_tab`、`get_dom_snapshot` 等）
-2. Figma MCP（`get_metadata` / `get_design_context`）
+2. Figma MCP（`get_metadata` / `get_design_context` / `get_screenshot`）
 3. 用户已安装并连接配套 Chrome 扩展（`ws://127.0.0.1:9527`）
 
 ## 闸门（必须按序；任一步失败则停止，用中文友好提示，禁止继续瞎比）
@@ -73,7 +73,7 @@ description: >-
 
 | 侧 | 信号来源 | 用来判断的内容 |
 |----|----------|----------------|
-| Figma | `get_metadata` 根节点名 + `get_design_context` / 截图 | Frame 名、主标题、关键区块（如上传区、底栏双按钮） |
+| Figma | `get_metadata` 根节点名 + `get_design_context` / `get_screenshot` | Frame 名、主标题、关键区块（如上传区、底栏双按钮） |
 | Target | `screenshot_design_width` + `get_dom_snapshot` | 截图主结构、`textPreview` 锚点文案、主区块布局 |
 
 **同一屏**需大致同时成立（文案仅作锚点，不要求字字相等）：
@@ -92,13 +92,25 @@ description: >-
 ## 比对链路（闸门 0–4 通过后严格按序）
 
 1. `get_target_tab` — 再确认一次目标页  
-2. `screenshot_design_width` — 保证 `offsetWidth === 375`（沿用 Panel「设计稿尺寸」，勿另写一套模拟）  
+2. `screenshot_design_width` — 保证 `offsetWidth === 375`；**保留返回的 `pngBase64`**（页面图）  
 3. `get_dom_snapshot` — 几何/间距（gapBelow、gapRight）、宽高、padding/margin、圆角、边框、color、fontSize、lineHeight、fontWeight、opacity、disabled  
-4. Figma：`get_design_context` + 必要的 `get_metadata` / 截图（先读 figma-design-to-code skill）  
+4. Figma：`get_screenshot`（整页 Frame）拿到设计稿图 + `get_design_context` / `get_metadata`（先读 figma-design-to-code skill）  
 5. **同一屏复核**（闸门 4）：对不上则停止并提示，不进入细项比对  
 6. AI 软匹配节点（文案仅作锚点；**不比对文字内容与 font-family**）  
-7. `show_design_diffs` — 推到 Chrome 扩展工具箱「Figma 比对」tab  
-8. 聊天里给差异摘要表（selector / 属性 / 实际值 / 设计值）
+7. `show_design_diffs` — **必须**带上：
+   - `figmaImageBase64`：Figma `get_screenshot` 的图（base64 或 data URL）
+   - `pageImageBase64`：步骤 2 的 `pngBase64`
+   - `diffs`：属性差异数组
+   - `figmaNodeId` / `figmaFileKey` / `pageUrl`（可选）
+   
+   调用后扩展会：**聚焦 MCP 目标页 + 自动打开比对弹窗**（`sl-image-comparer` 滑块对比 + 差异列表）。
+8. **聊天输出（强制）**：
+   - **禁止**在聊天里贴差异表格、大段 markdown table、或再贴两张对比图。
+   - 只简短提示用户去插件查看，例如：
+
+> 比对完成，已在扩展弹窗打开「Figma ↔ 页面」滑块对比与差异列表。  
+> 请到弹出的比对窗口（或 Panel → 工具箱 → Figma 比对）查看；点击差异项可在目标页高亮对应节点。  
+> 共 {n} 处属性差异。
 
 ## 比对范围
 
@@ -125,3 +137,4 @@ description: >-
 - Target 未设置时用「当前激活 tab」凑合（除非用户明确说用激活 tab）  
 - 对非整页小组件链接硬比一整页  
 - Figma 与 Target 不是同一屏时仍做细项比对或编造还原度差异  
+- 比对完成后在聊天里输出差异表格或重复贴图（结果以扩展弹窗为准）  
