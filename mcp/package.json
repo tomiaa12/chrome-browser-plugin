@@ -1,11 +1,11 @@
 {
-  "name": "@tomiaa/chrome-mcp-figma-compare",
+  "name": "chrome-browser-plugin",
   "version": "1.0.1",
   "type": "module",
   "description": "MCP stdio server bridging Cursor/Copilot to Chrome extension via WebSocket",
   "main": "dist/server.cjs",
   "bin": {
-    "chrome-mcp-figma-compare": "dist/server.cjs"
+    "chrome-browser-plugin": "dist/server.cjs"
   },
   "files": [
     "dist",
@@ -21,10 +21,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tomiaa12/chrome-mcp-figma-compare.git",
+    "url": "git@github.com:tomiaa12/chrome-browser-plugin.git",
     "directory": "mcp"
   },
-  "homepage": "https://github.com/tomiaa12/chrome-mcp-figma-compare/tree/main/mcp",
+  "homepage": "https://github.com/tomiaa12/chrome-browser-plugin/tree/main/mcp",
   "license": "MIT",
   "keywords": [
     "cursor",

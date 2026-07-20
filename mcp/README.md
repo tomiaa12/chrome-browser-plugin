@@ -1,4 +1,4 @@
-# @tomiaa/chrome-mcp-figma-compare
+# chrome-browser-plugin
 
 MCP 服务：给 AI 提供 Chrome 页面相关工具（截图、DOM 快照、网络请求、设计差异推送等）。
 
@@ -11,9 +11,9 @@ MCP 服务：给 AI 提供 Chrome 页面相关工具（截图、DOM 快照、网
 ```json
 {
   "mcpServers": {
-    "chrome-extension": {
+    "chrome-browser-plugin": {
       "command": "npx",
-      "args": ["-y", "@tomiaa/chrome-mcp-figma-compare"],
+      "args": ["-y", "chrome-browser-plugin"],
     }
   }
 }
@@ -36,10 +36,10 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 ```json
 {
   "servers": {
-    "chrome-extension": {
+    "chrome-browser-plugin": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@tomiaa/chrome-mcp-figma-compare"],
+      "args": ["-y", "chrome-browser-plugin"],
     }
   }
 }

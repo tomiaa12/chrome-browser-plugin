@@ -2,7 +2,7 @@
 name: figma-page-compare
 description: >-
   Figma 设计稿与 Chrome 页面 MCP 还原度比对。当用户提到 Figma URL、设计走查、
-  show_design_diffs、chrome-extension 比对、页面还原度时使用本 skill。
+  show_design_diffs、chrome-browser-plugin 比对、页面还原度时使用本 skill。
 ---
 
 # Figma ↔ 页面 MCP 比对
@@ -11,7 +11,7 @@ description: >-
 
 依赖：
 
-1. 本插件提供的 MCP（`chrome-extension` / `ping`、`get_target_tab`、`get_dom_snapshot` 等）
+1. 本插件提供的 MCP（`chrome-browser-plugin` / `ping`、`get_target_tab`、`get_dom_snapshot` 等）
 2. Figma MCP（`get_metadata` / `get_design_context` / `get_screenshot`）
 3. 用户已安装并连接配套 Chrome 扩展（`ws://127.0.0.1:9527`）
 
@@ -49,7 +49,7 @@ description: >-
 | MCP | 用途 | 探活 |
 |-----|------|------|
 | `plugin-figma-figma`（或 Figma） | 设计稿 | `get_metadata` / `get_design_context` |
-| chrome-extension（本插件 MCP） | 页面 | `ping` 或 `get_target_tab` |
+| `chrome-browser-plugin`（本插件 MCP，操控浏览器） | 页面 | `ping` 或 `get_target_tab` |
 
 - Figma 不可用：提示检查 Cursor / VS Code MCP 里 Figma 已连接/授权。
 - Chrome 扩展不可用 / `Chrome extension is not connected`：提示先启动本 MCP，再在 Chrome 刷新扩展，确认连上 `ws://127.0.0.1:9527`。

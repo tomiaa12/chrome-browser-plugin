@@ -23,7 +23,7 @@ let shuttingDown = false;
 
 // 必须写 stderr，不能污染 stdout
 function log(...args) {
-  console.error("[devtools-net-formatter-mcp]", ...args);
+  console.error("[chrome-browser-plugin]", ...args);
 }
 
 function closeWebSocketServer() {
@@ -225,7 +225,7 @@ function toolText(data) {
 
 /** 注册 ping / open_url / get_active_tab，均经 sendToExtension 下发 */
 function createMcpServer() {  const mcpServer = new McpServer({
-    name: "devtools-net-formatter",
+    name: "chrome-browser-plugin",
     version: "1.0.0",
   });
 

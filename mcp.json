@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "chrome-extension": {
+    "chrome-browser-plugin": {
       "command": "node",
       "args": ["./mcp/dist/server.cjs"],
       "env": {

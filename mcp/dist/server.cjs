@@ -24631,7 +24631,7 @@ var REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 3e4);
 var extensionSocket = null;
 var pendingRequests = /* @__PURE__ */ new Map();
 function log(...args) {
-  console.error("[devtools-net-formatter-mcp]", ...args);
+  console.error("[chrome-browser-plugin]", ...args);
 }
 function startWebSocketServer(retryLeft = 8) {
   const wss = new import_websocket_server.default({
@@ -24751,7 +24751,7 @@ function toolText(data) {
 }
 function createMcpServer() {
   const mcpServer = new McpServer({
-    name: "devtools-net-formatter",
+    name: "chrome-browser-plugin",
     version: "1.0.0"
   });
   mcpServer.registerTool(
