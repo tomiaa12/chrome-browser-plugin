@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>隐私权政策 · 解密抓包远程调试助手</title>
+  <style>
+    :root {
+      --bg: #f7f6f3;
+      --card: #fffef9;
+      --ink: #1c1b19;
+      --muted: #5c5954;
+      --line: #e4e0d8;
+      --accent: #0f5c4c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(ellipse 80% 50% at 10% -10%, #d9ebe4 0%, transparent 55%),
+        radial-gradient(ellipse 60% 40% at 100% 0%, #efe8d8 0%, transparent 50%),
+        var(--bg);
+      line-height: 1.7;
+    }
+    main {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin: 0 0 8px;
+    }
+    .meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 32px;
+    }
+    h2 {
+      font-size: 1.1rem;
+      margin: 28px 0 10px;
+      color: var(--accent);
+    }
+    p, li { font-size: 0.95rem; }
+    ul { padding-left: 1.25rem; }
+    li { margin: 6px 0; }
+    a { color: var(--accent); }
+    .box {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 20px 22px;
+      margin-top: 20px;
+    }
+    footer {
+      margin-top: 40px;
+      padding-top: 20px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>隐私权政策</h1>
+    <p class="meta">
+      产品名称：解密抓包远程调试助手<br />
+      生效日期：2026 年 7 月 20 日<br />
+      最后更新：2026 年 7 月 20 日
+    </p>
+
+    <div class="box">
+      <p>
+        本隐私权政策说明 Chrome 扩展「解密抓包远程调试助手」（以下简称「本扩展」）如何处理与您使用相关的信息。
+        使用本扩展即表示您已阅读并理解本政策。
+      </p>
+    </div>
+
+    <h2>1. 我们是谁</h2>
+    <p>
+      本扩展由开发者维护，用于本地网络请求监控、接口解密查看、远程调试辅助等开发调试场景。
+      相关代码仓库：
+      <a href="https://github.com/tomiaa12/devtools-net-formatter" target="_blank" rel="noopener noreferrer">devtools-net-formatter</a>。
+    </p>
+
+    <h2>2. 我们收集哪些信息</h2>
+    <p>本扩展可能在您主动使用相关功能时，于您的浏览器本地处理以下类型的数据：</p>
+    <ul>
+      <li><strong>网络请求信息</strong>：请求 URL、方法、请求头/响应头、请求体/响应体、状态码、耗时等，用于抓包展示、过滤、格式化与解密查看。</li>
+      <li><strong>Cookie 与本地存储相关数据</strong>：在您启用相关调试/账号同步等功能时，可能读取页面 Cookie、localStorage 中与调试相关的键值（例如会话或密钥类字段）。</li>
+      <li><strong>标签页与页面上下文</strong>：当前标签页 URL、标题等，用于将调试能力绑定到目标页面。</li>
+      <li><strong>扩展配置与偏好</strong>：您在扩展中设置的规则、开关、面板状态等，保存在浏览器扩展存储（如 <code>chrome.storage</code>）中。</li>
+      <li><strong>剪贴板</strong>：在您主动复制内容时写入剪贴板（例如复制请求数据）。</li>
+    </ul>
+    <p>本扩展<strong>不会</strong>要求您注册账号，也<strong>不会</strong>主动收集姓名、邮箱、电话等身份信息用于运营分析。</p>
+
+    <h2>3. 信息如何使用</h2>
+    <ul>
+      <li>在本地展示与分析网络请求，辅助接口调试与解密查看；</li>
+      <li>注入或启用以您选择的调试工具（如远程调试、控制台工具）所需的脚本与规则；</li>
+      <li>保存您的扩展配置，以便下次继续使用；</li>
+      <li>在您发起的操作中，与本机或您自行配置的本地调试服务通信（例如本机 Whistle / Chii 等）。</li>
+    </ul>
+
+    <h2>4. 数据存储与传输</h2>
+    <ul>
+      <li><strong>默认本地处理</strong>：抓包、解密查看与配置数据主要在您的设备与浏览器本地处理与存储，开发者不会运营用于收集这些数据的后端服务器。</li>
+      <li><strong>本地调试服务</strong>：当您启用远程调试等相关功能时，数据可能发送到您本机或您指定的本地调试地址（例如 <code>localhost</code> / 本机代理端口）。这些服务由您自行部署与控制。</li>
+      <li><strong>可选第三方脚本</strong>：若您主动开启依赖 CDN 的调试插件选项，浏览器可能从公开 CDN（例如 jsDelivr）加载对应脚本。该行为由您主动启用，且遵循对应 CDN 与开源库的政策。</li>
+      <li><strong>不上传出售</strong>：我们不会将您的网络请求内容、Cookie 或调试数据出售、出租或以广告定向为目的提供给第三方。</li>
+    </ul>
+
+    <h2>5. 权限说明</h2>
+    <p>本扩展申请的权限仅用于实现上述调试功能，包括但不限于：</p>
+    <ul>
+      <li><code>tabs</code> / <code>scripting</code> / <code>sidePanel</code>：定位目标页面并提供面板与脚本能力；</li>
+      <li><code>debugger</code>：捕获与分析网络请求；</li>
+      <li><code>cookies</code>：在调试场景下读取必要 Cookie；</li>
+      <li><code>storage</code>：保存扩展配置；</li>
+      <li><code>clipboardWrite</code>：支持复制调试内容。</li>
+    </ul>
+
+    <h2>6. 数据保留与删除</h2>
+    <ul>
+      <li>会话类调试数据通常随页面关闭、扩展重载或您清空面板而清除；</li>
+      <li>配置类数据保存在浏览器本地，您可通过清除扩展数据、重置扩展或卸载扩展予以删除；</li>
+      <li>开发者不持有可远程删除您本地数据的云端副本（因默认不上传）。</li>
+    </ul>
+
+    <h2>7. 信息共享</h2>
+    <p>
+      除以下情形外，我们不会与第三方共享您的用户数据：
+    </p>
+    <ul>
+      <li>您主动启用并连接的本地/自建调试工具或服务；</li>
+      <li>您主动启用并从 CDN 加载的第三方调试脚本；</li>
+      <li>法律法规要求或有权机关依法提出的披露要求。</li>
+    </ul>
+
+    <h2>8. 儿童隐私</h2>
+    <p>本扩展面向开发与调试场景的成年用户，不面向 13 岁以下儿童，也不会故意收集儿童的个人信息。</p>
+
+    <h2>9. 政策更新</h2>
+    <p>
+      我们可能适时更新本隐私权政策。更新后将修改本页面的「最后更新」日期。
+      若变更对您的权利产生重大影响，我们会通过扩展说明或相关仓库尽量提示。
+    </p>
+
+    <h2>10. 联系我们</h2>
+    <p>
+      如对本隐私权政策或数据处理有任何疑问，请通过以下方式联系：
+    </p>
+    <ul>
+      <li>
+        GitHub Issues：
+        <a href="https://github.com/tomiaa12/devtools-net-formatter/issues" target="_blank" rel="noopener noreferrer">
+          tomiaa12/devtools-net-formatter
+        </a>
+      </li>
+    </ul>
+
+    <footer>
+      本页面用于满足 Chrome 网上应用店对隐私权政策公开可访问链接的要求。
+    </footer>
+  </main>
+</body>
+</html>
