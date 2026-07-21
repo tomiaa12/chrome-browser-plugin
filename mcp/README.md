@@ -13,7 +13,7 @@ MCP 服务：给 AI 提供 Chrome 页面相关工具（截图、DOM 快照、网
   "mcpServers": {
     "chrome-browser-plugin": {
       "command": "npx",
-      "args": ["-y", "chrome-browser-plugin"],
+      "args": ["-y", "chrome-browser-plugin"]
     }
   }
 }
@@ -39,7 +39,7 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
     "chrome-browser-plugin": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "chrome-browser-plugin"],
+      "args": ["-y", "chrome-browser-plugin"]
     }
   }
 }

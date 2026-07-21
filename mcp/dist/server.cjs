@@ -10562,6 +10562,7 @@ __export(server_exports, {
   sendToExtension: () => sendToExtension
 });
 module.exports = __toCommonJS(server_exports);
+var import_node_child_process = require("node:child_process");
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
 var util;
@@ -24669,7 +24670,74 @@ function shutdown(reason) {
   pendingRequests.clear();
   setTimeout(() => process.exit(0), 50).unref?.();
 }
-function startWebSocketServer(retryLeft = 20) {
+function listListenPids(port) {
+  const myPid = process.pid;
+  try {
+    if (process.platform === "win32") {
+      const out2 = (0, import_node_child_process.execFileSync)("netstat", ["-ano", "-p", "TCP"], {
+        encoding: "utf8"
+      });
+      const pids = /* @__PURE__ */ new Set();
+      const portRe = new RegExp(`:${port}(?:\\s|$)`);
+      for (const line of out2.split(/\r?\n/)) {
+        if (!/LISTENING/i.test(line) || !portRe.test(line)) continue;
+        const parts = line.trim().split(/\s+/);
+        const pid = Number(parts[parts.length - 1]);
+        if (pid && pid !== myPid) pids.add(pid);
+      }
+      return [...pids];
+    }
+    const out = (0, import_node_child_process.execFileSync)(
+      "lsof",
+      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"],
+      { encoding: "utf8" }
+    );
+    return [
+      ...new Set(
+        out.split(/\n/).map((s) => Number(s.trim())).filter((pid) => pid && pid !== myPid)
+      )
+    ];
+  } catch {
+    return [];
+  }
+}
+function killPid(pid, force) {
+  if (process.platform === "win32") {
+    (0, import_node_child_process.execFileSync)("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      stdio: "ignore"
+    });
+    return;
+  }
+  process.kill(pid, force ? "SIGKILL" : "SIGTERM");
+}
+function freeListenPort(port, done) {
+  const pids = listListenPids(port);
+  if (pids.length === 0) {
+    log(`Port ${port} reported in use, but no other LISTEN pid found`);
+    done();
+    return;
+  }
+  for (const pid of pids) {
+    try {
+      killPid(pid, false);
+      log(`Sent SIGTERM to pid ${pid} holding port ${port}`);
+    } catch (error2) {
+      log(`Failed to signal pid ${pid}:`, error2?.message || String(error2));
+    }
+  }
+  setTimeout(() => {
+    for (const pid of listListenPids(port)) {
+      try {
+        killPid(pid, true);
+        log(`Force-killed pid ${pid} still holding port ${port}`);
+      } catch (error2) {
+        log(`Failed to kill pid ${pid}:`, error2?.message || String(error2));
+      }
+    }
+    done();
+  }, 250);
+}
+function startWebSocketServer(retryLeft = 10) {
   if (shuttingDown) return null;
   const wss = new import_websocket_server.default({
     host: WS_HOST,
@@ -24739,16 +24807,17 @@ function startWebSocketServer(retryLeft = 20) {
     } catch (_) {
     }
     if ((code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) && retryLeft > 0) {
-      const delayMs = Math.min(1500, 300 + (20 - retryLeft) * 100);
       log(
-        `Port ${WS_PORT} in use; retrying in ${delayMs}ms (${retryLeft} left). If this persists, kill the old node MCP process or set CHROME_MCP_WS_PORT.`
+        `Port ${WS_PORT} in use; killing holders then retrying (${retryLeft} left).`
       );
-      setTimeout(() => startWebSocketServer(retryLeft - 1), delayMs);
+      freeListenPort(WS_PORT, () => {
+        setTimeout(() => startWebSocketServer(retryLeft - 1), 100);
+      });
       return;
     }
     if (code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) {
       log(
-        `Fatal: ws://${WS_HOST}:${WS_PORT} still in use. Free the port or set CHROME_MCP_WS_PORT.`
+        `Fatal: ws://${WS_HOST}:${WS_PORT} still in use after kill attempts. Set CHROME_MCP_WS_PORT or free the port manually.`
       );
     }
     process.exit(1);

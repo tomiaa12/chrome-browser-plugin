@@ -8,16 +8,16 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 ├── .plugin/plugin.json          # OpenPlugin（VS Code Copilot）
 ├── .claude-plugin/plugin.json   # Claude / Copilot 兼容
 ├── .github/plugin/plugin.json   # Copilot 插件清单
-├── mcp.json                     # Cursor MCP → ./mcp/dist/server.cjs
-├── .mcp.json                    # Copilot MCP → ${PLUGIN_ROOT}/mcp/dist/server.cjs
+├── mcp.json                     # Cursor MCP → npx -y chrome-browser-plugin
+├── .mcp.json                    # Copilot MCP → npx -y chrome-browser-plugin
 ├── skills/
 │   └── figma-page-compare/
 │       └── SKILL.md
-├── mcp/
+├── mcp/                         # npm 包 chrome-browser-plugin 源码
 │   ├── package.json
-│   ├── server.js                # 源码
+│   ├── server.js
 │   ├── build.mjs
-│   └── dist/server.cjs          # 打包产物（bin / MCP 入口，含依赖）
+│   └── dist/server.cjs
 └── README.md
 ```
 
@@ -28,6 +28,6 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 
 ## 使用前
 
-1. Node ≥ 18；首次改 MCP 源码后：`cd mcp && pnpm install && pnpm build`（生成 `dist/server.cjs`）
+1. Node ≥ 18；MCP 通过 `npx -y chrome-browser-plugin` 从 npm 拉取执行
 2. Chrome 加载配套扩展，Panel 点「设为 MCP 目标页」
 3. 另配 Figma MCP

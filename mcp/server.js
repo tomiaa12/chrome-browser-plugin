@@ -2,7 +2,9 @@
 // Cursor stdio MCP ↔ WebSocket ↔ Chrome 插件
 // stdout 留给 MCP 协议，日志走 stderr（Cursor 会显示为 [error]，属正常）
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { execFileSync } from "node:child_process";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { WebSocketServer, WebSocket } from "ws";
 import * as z from "zod";
 
@@ -69,8 +71,86 @@ function shutdown(reason) {
   setTimeout(() => process.exit(0), 50).unref?.();
 }
 
-/** 监听 9527，等待插件 background 连入；端口占用时重试，避免 Cursor 卡在旧 tool 列表 */
-function startWebSocketServer(retryLeft = 20) {
+/** 查出占用 TCP 监听端口的 PID（不含自己） */
+function listListenPids(port) {
+  const myPid = process.pid;
+  try {
+    if (process.platform === "win32") {
+      const out = execFileSync("netstat", ["-ano", "-p", "TCP"], {
+        encoding: "utf8",
+      });
+      const pids = new Set();
+      const portRe = new RegExp(`:${port}(?:\\s|$)`);
+      for (const line of out.split(/\r?\n/)) {
+        if (!/LISTENING/i.test(line) || !portRe.test(line)) continue;
+        const parts = line.trim().split(/\s+/);
+        const pid = Number(parts[parts.length - 1]);
+        if (pid && pid !== myPid) pids.add(pid);
+      }
+      return [...pids];
+    }
+
+    const out = execFileSync(
+      "lsof",
+      ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"],
+      { encoding: "utf8" },
+    );
+    return [
+      ...new Set(
+        out
+          .split(/\n/)
+          .map((s) => Number(s.trim()))
+          .filter((pid) => pid && pid !== myPid),
+      ),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+function killPid(pid, force) {
+  if (process.platform === "win32") {
+    execFileSync("taskkill", ["/PID", String(pid), "/T", "/F"], {
+      stdio: "ignore",
+    });
+    return;
+  }
+  process.kill(pid, force ? "SIGKILL" : "SIGTERM");
+}
+
+/** 端口被占时结束占用进程，完成后回调（先 SIGTERM，仍占则 SIGKILL） */
+function freeListenPort(port, done) {
+  const pids = listListenPids(port);
+  if (pids.length === 0) {
+    log(`Port ${port} reported in use, but no other LISTEN pid found`);
+    done();
+    return;
+  }
+
+  for (const pid of pids) {
+    try {
+      killPid(pid, false);
+      log(`Sent SIGTERM to pid ${pid} holding port ${port}`);
+    } catch (error) {
+      log(`Failed to signal pid ${pid}:`, error?.message || String(error));
+    }
+  }
+
+  setTimeout(() => {
+    for (const pid of listListenPids(port)) {
+      try {
+        killPid(pid, true);
+        log(`Force-killed pid ${pid} still holding port ${port}`);
+      } catch (error) {
+        log(`Failed to kill pid ${pid}:`, error?.message || String(error));
+      }
+    }
+    done();
+  }, 250);
+}
+
+/** 监听 9527，等待插件 background 连入；端口占用时杀掉旧进程并重试 */
+function startWebSocketServer(retryLeft = 10) {
   if (shuttingDown) return null;
 
   const wss = new WebSocketServer({
@@ -158,20 +238,20 @@ function startWebSocketServer(retryLeft = 20) {
       /* ignore */
     }
 
-    // Cursor 热重启时旧进程可能尚未释放端口；多等一会儿再抢
+    // Cursor 热重启时旧进程可能尚未释放端口：杀掉占用者再抢
     if ((code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) && retryLeft > 0) {
-      const delayMs = Math.min(1500, 300 + (20 - retryLeft) * 100);
       log(
-        `Port ${WS_PORT} in use; retrying in ${delayMs}ms (${retryLeft} left). ` +
-          `If this persists, kill the old node MCP process or set CHROME_MCP_WS_PORT.`,
+        `Port ${WS_PORT} in use; killing holders then retrying (${retryLeft} left).`,
       );
-      setTimeout(() => startWebSocketServer(retryLeft - 1), delayMs);
+      freeListenPort(WS_PORT, () => {
+        setTimeout(() => startWebSocketServer(retryLeft - 1), 100);
+      });
       return;
     }
 
     if (code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) {
       log(
-        `Fatal: ws://${WS_HOST}:${WS_PORT} still in use. Free the port or set CHROME_MCP_WS_PORT.`,
+        `Fatal: ws://${WS_HOST}:${WS_PORT} still in use after kill attempts. Set CHROME_MCP_WS_PORT or free the port manually.`,
       );
     }
     process.exit(1);
