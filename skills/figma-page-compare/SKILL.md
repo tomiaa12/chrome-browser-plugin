@@ -1,8 +1,10 @@
 ---
 name: figma-page-compare
 description: >-
-  Figma 设计稿与 Chrome 页面 MCP 还原度比对。当用户提到 Figma URL、设计走查、
-  show_design_diffs、chrome-browser-plugin 比对、页面还原度时使用本 skill。
+  用 chrome-browser-plugin 的 show_design_diffs，把 Figma 整页 Frame 与已钉住的
+  Chrome 目标页做还原度/设计走查比对。仅当用户明确要求「比对设计稿与当前页面」「设计走查」
+  「还原度检查」「设计差异」或调用 show_design_diffs 时使用。不要在「按 Figma 写/实现页面」
+  「只看这个 Figma 链接」「设计稿落地/转代码」时启用。
 ---
 
 # Figma ↔ 页面 MCP 比对
