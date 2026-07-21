@@ -2,7 +2,7 @@
   "name": "chrome-browser-plugin",
   "displayName": "Chrome Browser Plugin",
   "version": "1.0.0",
-  "description": "Chrome 扩展 MCP 桥 + Figma↔页面比对 Skill。需配合 Chrome 扩展使用。",
+  "description": "Chrome 扩展 MCP。需配合 Chrome 扩展使用。",
   "author": {
     "name": "tomiaa12"
   },
