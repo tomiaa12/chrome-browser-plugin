@@ -2,7 +2,7 @@
   "mcpServers": {
     "chrome-browser-plugin": {
       "command": "node",
-      "args": ["./mcp/dist/server.cjs"],
+      "args": ["${PLUGIN_ROOT}/mcp/dist/server.cjs"],
       "env": {
         "CHROME_MCP_WS_HOST": "127.0.0.1",
         "CHROME_MCP_WS_PORT": "9527"

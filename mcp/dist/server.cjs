@@ -24629,15 +24629,53 @@ var WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 var WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
 var REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 3e4);
 var extensionSocket = null;
+var activeWss = null;
 var pendingRequests = /* @__PURE__ */ new Map();
+var shuttingDown = false;
 function log(...args) {
   console.error("[chrome-browser-plugin]", ...args);
 }
-function startWebSocketServer(retryLeft = 8) {
+function closeWebSocketServer() {
+  const wss = activeWss;
+  activeWss = null;
+  if (!wss) return;
+  try {
+    for (const client of wss.clients) {
+      try {
+        client.terminate();
+      } catch (_) {
+      }
+    }
+    wss.close();
+  } catch (_) {
+  }
+  if (extensionSocket) {
+    try {
+      extensionSocket.terminate();
+    } catch (_) {
+    }
+    extensionSocket = null;
+  }
+}
+function shutdown(reason) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  log(`Shutting down (${reason})`);
+  closeWebSocketServer();
+  for (const [, pending] of pendingRequests) {
+    clearTimeout(pending.timer);
+    pending.reject(new Error(`MCP shutting down: ${reason}`));
+  }
+  pendingRequests.clear();
+  setTimeout(() => process.exit(0), 50).unref?.();
+}
+function startWebSocketServer(retryLeft = 20) {
+  if (shuttingDown) return null;
   const wss = new import_websocket_server.default({
     host: WS_HOST,
     port: WS_PORT
   });
+  activeWss = wss;
   wss.on("listening", () => {
     log(`WebSocket server listening on ws://${WS_HOST}:${WS_PORT}`);
   });
@@ -24693,15 +24731,19 @@ function startWebSocketServer(retryLeft = 8) {
     const msg = error2?.message || String(error2);
     const code = error2?.code;
     log("WebSocket server error:", msg);
+    if (activeWss === wss) {
+      activeWss = null;
+    }
     try {
       wss.close();
     } catch (_) {
     }
     if ((code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) && retryLeft > 0) {
+      const delayMs = Math.min(1500, 300 + (20 - retryLeft) * 100);
       log(
-        `Port ${WS_PORT} in use; retrying in 500ms (${retryLeft} left). If this persists, Restart MCP after the previous instance exits.`
+        `Port ${WS_PORT} in use; retrying in ${delayMs}ms (${retryLeft} left). If this persists, kill the old node MCP process or set CHROME_MCP_WS_PORT.`
       );
-      setTimeout(() => startWebSocketServer(retryLeft - 1), 500);
+      setTimeout(() => startWebSocketServer(retryLeft - 1), delayMs);
       return;
     }
     if (code === "EADDRINUSE" || /EADDRINUSE/i.test(msg)) {
@@ -24792,7 +24834,7 @@ function createMcpServer() {
   mcpServer.registerTool(
     "get_target_tab",
     {
-      description: "Get the pinned MCP target tab (set via extension panel \u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D). Prefer this over get_active_tab for design comparison.",
+      description: "Get the pinned MCP target tab (set via extension panel \u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D). Page tools require this to be set.",
       inputSchema: {}
     },
     async () => {
@@ -24803,9 +24845,9 @@ function createMcpServer() {
   mcpServer.registerTool(
     "set_target_tab",
     {
-      description: "Pin or clear the MCP target tab. Usually set from the extension panel; optional for AI.",
+      description: "Pin or clear the MCP target tab. Usually set from the extension panel\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D; optional for AI. Page tools fail until pinned.",
       inputSchema: {
-        tabId: numberType().int().optional().describe("Tab id to pin"),
+        tabId: numberType().int().optional().describe("Tab id to pin; omit to pin current active tab"),
         clear: booleanType().optional().describe("If true, clear pinned target")
       }
     },
@@ -24817,17 +24859,16 @@ function createMcpServer() {
   mcpServer.registerTool(
     "run_automation",
     {
-      description: "Run Automation code in the MCP target tab (or active tab) MAIN world. Supports assertVisible/assertText (throws on failure).",
+      description: "Run Automation code in the pinned MCP target tab MAIN world. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst. Supports assertVisible/assertText (throws on failure).",
       inputSchema: {
         code: stringType().describe("Automation JS, e.g. await Automation.click('.btn')"),
-        tabId: numberType().int().optional().describe("Target tab id; default pinned MCP target, else active tab"),
         timeoutMs: numberType().int().optional().describe("MCP wait timeout, default 120000")
       }
     },
-    async ({ code, tabId, timeoutMs }) => {
+    async ({ code, timeoutMs }) => {
       const data = await sendToExtension(
         "run_automation",
-        { code, tabId },
+        { code },
         { timeoutMs: timeoutMs || 12e4 }
       );
       return toolText(data);
@@ -24836,17 +24877,16 @@ function createMcpServer() {
   mcpServer.registerTool(
     "screenshot_tab",
     {
-      description: "Capture full-page PNG screenshot of a tab (returns base64, may truncate).",
+      description: "Capture full-page PNG of the pinned MCP target tab (returns base64, may truncate). Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst.",
       inputSchema: {
-        tabId: numberType().int().optional(),
         maxBase64Length: numberType().int().optional().describe("Default 120000"),
         timeoutMs: numberType().int().optional().describe("Default 60000")
       }
     },
-    async ({ tabId, maxBase64Length, timeoutMs }) => {
+    async ({ maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_tab",
-        { tabId, maxBase64Length },
+        { maxBase64Length },
         { timeoutMs: timeoutMs || 6e4 }
       );
       return toolText(data);
@@ -24855,19 +24895,18 @@ function createMcpServer() {
   mcpServer.registerTool(
     "screenshot_design_width",
     {
-      description: "Capture full-page PNG at design width (default 375). If documentElement.offsetWidth !== 375, enables mobile design-size emulation first, then screenshots. Use for Figma vs page visual compare.",
+      description: "Capture full-page PNG of the pinned MCP target tab at design width (default 375). Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst. If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
       inputSchema: {
-        tabId: numberType().int().optional(),
         width: numberType().int().optional().describe("Design width, default 375"),
         height: numberType().int().optional().describe("Design height, default 812"),
         maxBase64Length: numberType().int().optional().describe("Default 120000"),
         timeoutMs: numberType().int().optional().describe("Default 90000")
       }
     },
-    async ({ tabId, width, height, maxBase64Length, timeoutMs }) => {
+    async ({ width, height, maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_design_width",
-        { tabId, width, height, maxBase64Length },
+        { width, height, maxBase64Length },
         { timeoutMs: timeoutMs || 9e4 }
       );
       return toolText(data);
@@ -24876,17 +24915,16 @@ function createMcpServer() {
   mcpServer.registerTool(
     "get_dom_snapshot",
     {
-      description: "DOM snapshot of MCP target tab for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Ignores text content and font-family for diffs. Prefer after screenshot_design_width.",
+      description: "DOM snapshot of the pinned MCP target tab for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst. Prefer after screenshot_design_width.",
       inputSchema: {
-        tabId: numberType().int().optional(),
         maxNodes: numberType().int().optional().describe("Default 120"),
         timeoutMs: numberType().int().optional().describe("Default 60000")
       }
     },
-    async ({ tabId, maxNodes, timeoutMs }) => {
+    async ({ maxNodes, timeoutMs }) => {
       const data = await sendToExtension(
         "get_dom_snapshot",
-        { tabId, maxNodes },
+        { maxNodes },
         { timeoutMs: timeoutMs || 6e4 }
       );
       return toolText(data);
@@ -24895,34 +24933,36 @@ function createMcpServer() {
   mcpServer.registerTool(
     "show_design_diffs",
     {
-      description: "Push Figma-vs-page diff JSON to the extension toolbox tab\u300CFigma \u6BD4\u5BF9\u300D. Call after comparing Figma MCP + get_dom_snapshot. Pass diffs as an array of { selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }.",
+      description: "Push Figma-vs-page compare result to the Chrome extension: opens a popup on the pinned MCP target with sl-image-comparer (Figma vs page screenshots) + property diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension popup \u2014 do NOT dump a markdown table in chat.",
       inputSchema: {
         pageUrl: stringType().optional(),
         figmaNodeId: stringType().optional(),
         figmaFileKey: stringType().optional(),
+        figmaImageBase64: stringType().optional().describe("Figma frame screenshot base64 (from Figma get_screenshot); data: URL prefix optional"),
+        pageImageBase64: stringType().optional().describe("Page screenshot base64 from screenshot_design_width.pngBase64"),
         diffs: arrayType(recordType(anyType())).describe(
           "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }]"
         )
       }
     },
     async (args) => {
-      const data = await sendToExtension("show_design_diffs", args);
+      const data = await sendToExtension("show_design_diffs", args, {
+        timeoutMs: 6e4
+      });
       return toolText(data);
     }
   );
   mcpServer.registerTool(
     "get_network_requests",
     {
-      description: "Get cached fetch/XHR captures for a tab (from extension net capture).",
+      description: "Get cached fetch/XHR captures for the pinned MCP target tab. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst.",
       inputSchema: {
-        tabId: numberType().int().optional(),
         urlPattern: stringType().optional().describe("Filter by URL substring"),
         limit: numberType().int().optional().describe("Default 50")
       }
     },
-    async ({ tabId, urlPattern, limit }) => {
+    async ({ urlPattern, limit }) => {
       const data = await sendToExtension("get_network_requests", {
-        tabId,
         urlPattern,
         limit
       });
@@ -24937,6 +24977,10 @@ async function main() {
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
   log("MCP stdio server started");
+  process.on("SIGINT", () => shutdown("SIGINT"));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.stdin.on("end", () => shutdown("stdin end"));
+  process.stdin.on("close", () => shutdown("stdin close"));
 }
 main().catch((error2) => {
   log("Fatal error:", error2?.message || String(error2));

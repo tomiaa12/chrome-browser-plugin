@@ -9,7 +9,7 @@
   "license": "MIT",
   "homepage": "https://github.com/tomiaa12/chrome-browser-plugin",
   "repository": "https://github.com/tomiaa12/chrome-browser-plugin",
-  "logo": "assets/logo.png",
+  "logo": "https://raw.githubusercontent.com/tomiaa12/chrome-browser-plugin/main/assets/logo.png",
   "keywords": [
     "mcp",
     "chrome",
