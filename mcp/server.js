@@ -3,10 +3,41 @@
 // stdout 留给 MCP 协议，日志走 stderr（Cursor 会显示为 [error]，属正常）
 
 import { execFileSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { WebSocketServer, WebSocket } from "ws";
 import * as z from "zod";
+
+/** 将 FILE:/abs/path 展开为 data URL / 纯 base64，供扩展侧展示图片 */
+async function resolveLocalFileFields(args, keys) {
+  if (!args || typeof args !== "object") return args;
+  const out = { ...args };
+  for (const key of keys) {
+    const value = out[key];
+    if (typeof value !== "string") continue;
+    const m = value.match(/^FILE:(.+)$/);
+    if (!m) continue;
+    const filePath = m[1].trim();
+    try {
+      const buf = await readFile(filePath);
+      const isJpeg = buf[0] === 0xff && buf[1] === 0xd8;
+      const isPng = buf[0] === 0x89 && buf[1] === 0x50;
+      const mime = isJpeg ? "image/jpeg" : isPng ? "image/png" : "application/octet-stream";
+      // 若原文件内容已是 data URL / 纯文本 base64，直接透传
+      const asText = buf.toString("utf8");
+      if (asText.startsWith("data:image/") || /^[A-Za-z0-9+/=\s]+$/.test(asText.slice(0, 80))) {
+        out[key] = asText.trim();
+      } else {
+        out[key] = `data:${mime};base64,${buf.toString("base64")}`;
+      }
+      log(`Expanded ${key} from FILE:${filePath} (${buf.length} bytes)`);
+    } catch (e) {
+      log(`Failed to expand FILE for ${key}:`, e?.message || e);
+    }
+  }
+  return out;
+}
 
 const WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 const WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
@@ -462,7 +493,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "show_design_diffs",
     {
       description:
-        "Push Figma-vs-page compare result to the Chrome extension: opens a popup on the pinned MCP target with sl-image-comparer (Figma vs page screenshots) + property diffs. Requires「设为 MCP 目标页」. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension popup — do NOT dump a markdown table in chat.",
+        "Push Figma-vs-page compare result to the Chrome extension: opens the toolbox「Figma 比对」tab (not a new browser window) with sl-image-comparer + property diffs. Requires「设为 MCP 目标页」. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension toolbox — do NOT dump a markdown table in chat.",
       inputSchema: {
         pageUrl: z.string().optional(),
         figmaNodeId: z.string().optional(),
@@ -483,7 +514,11 @@ function createMcpServer() {  const mcpServer = new McpServer({
       },
     },
     async (args) => {
-      const data = await sendToExtension("show_design_diffs", args, {
+      const resolved = await resolveLocalFileFields(args, [
+        "figmaImageBase64",
+        "pageImageBase64",
+      ]);
+      const data = await sendToExtension("show_design_diffs", resolved, {
         timeoutMs: 60000,
       });
       return toolText(data);

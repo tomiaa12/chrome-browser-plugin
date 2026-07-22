@@ -10563,6 +10563,7 @@ __export(server_exports, {
 });
 module.exports = __toCommonJS(server_exports);
 var import_node_child_process = require("node:child_process");
+var import_promises = require("node:fs/promises");
 
 // node_modules/.pnpm/zod@3.25.76/node_modules/zod/v3/helpers/util.js
 var util;
@@ -24626,6 +24627,33 @@ var import_websocket = __toESM(require_websocket(), 1);
 var import_websocket_server = __toESM(require_websocket_server(), 1);
 
 // server.js
+async function resolveLocalFileFields(args, keys) {
+  if (!args || typeof args !== "object") return args;
+  const out = { ...args };
+  for (const key of keys) {
+    const value = out[key];
+    if (typeof value !== "string") continue;
+    const m = value.match(/^FILE:(.+)$/);
+    if (!m) continue;
+    const filePath = m[1].trim();
+    try {
+      const buf = await (0, import_promises.readFile)(filePath);
+      const isJpeg = buf[0] === 255 && buf[1] === 216;
+      const isPng = buf[0] === 137 && buf[1] === 80;
+      const mime = isJpeg ? "image/jpeg" : isPng ? "image/png" : "application/octet-stream";
+      const asText = buf.toString("utf8");
+      if (asText.startsWith("data:image/") || /^[A-Za-z0-9+/=\s]+$/.test(asText.slice(0, 80))) {
+        out[key] = asText.trim();
+      } else {
+        out[key] = `data:${mime};base64,${buf.toString("base64")}`;
+      }
+      log(`Expanded ${key} from FILE:${filePath} (${buf.length} bytes)`);
+    } catch (e) {
+      log(`Failed to expand FILE for ${key}:`, e?.message || e);
+    }
+  }
+  return out;
+}
 var WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 var WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
 var REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 3e4);
@@ -25002,7 +25030,7 @@ function createMcpServer() {
   mcpServer.registerTool(
     "show_design_diffs",
     {
-      description: "Push Figma-vs-page compare result to the Chrome extension: opens a popup on the pinned MCP target with sl-image-comparer (Figma vs page screenshots) + property diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension popup \u2014 do NOT dump a markdown table in chat.",
+      description: "Push Figma-vs-page compare result to the Chrome extension: opens the toolbox\u300CFigma \u6BD4\u5BF9\u300Dtab (not a new browser window) with sl-image-comparer + property diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension toolbox \u2014 do NOT dump a markdown table in chat.",
       inputSchema: {
         pageUrl: stringType().optional(),
         figmaNodeId: stringType().optional(),
@@ -25015,7 +25043,11 @@ function createMcpServer() {
       }
     },
     async (args) => {
-      const data = await sendToExtension("show_design_diffs", args, {
+      const resolved = await resolveLocalFileFields(args, [
+        "figmaImageBase64",
+        "pageImageBase64"
+      ]);
+      const data = await sendToExtension("show_design_diffs", resolved, {
         timeoutMs: 6e4
       });
       return toolText(data);
