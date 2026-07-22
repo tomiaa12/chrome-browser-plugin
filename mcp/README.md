@@ -54,7 +54,7 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | `get_active_tab` | 当前激活 tab | 否 |
 | `get_target_tab` | 读取 MCP 目标页 | 否 |
 | `set_target_tab` | 设置 / 清除目标页 | 否 |
-| `show_design_diffs` | 推送截图+差异并打开工具箱「Figma 比对」 | **是** |
+| `show_design_diffs` | 推送截图+差异并打开 Panel 内 sl-dialog | **是** |
 | `run_automation` | 在目标页执行 Automation | **是** |
 | `screenshot_tab` | 整页截图 | **是** |
 | `screenshot_design_width` | 按设计稿宽度（375）截图 | **是** |
@@ -63,4 +63,4 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 
 页面类工具只操作 Panel「设为 MCP 目标页」钉住的 tab；未设置会报错，不再回退到当前激活页。
 
-`show_design_diffs` 须传 `figmaImageBase64` + `pageImageBase64`，会打开扩展工具箱「Figma 比对」页（不再开浏览器新窗口）；聊天里只提示去插件查看，勿再贴表格。
+`show_design_diffs` 须传 `figmaImageBase64` 和/或 `figmaImageUrl` + `diffs`（**不要**传 `pageImageBase64`，页面图用扩展在 `screenshot_design_width` 时缓存的完整截图）；打开 Panel 内 `sl-dialog`；聊天里只提示去插件查看，勿再贴表格。

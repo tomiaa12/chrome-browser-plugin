@@ -84,7 +84,7 @@ description: >-
 2. 关键结构对得上（如都有上传区 / 说明区 / 底栏按钮；不是完全不同的列表页 vs 表单页）。
 3. DOM / 截图里能找到设计稿上的若干核心锚点（如「上传证件」「点击上传」「文件要求」），缺失大半则视为不是同一屏。
 
-**不是同一屏**：停止，**不要**继续软匹配细项或臆造间距/颜色差异；可可选把「页面错位」推一条到 `show_design_diffs`，并提示：
+**不是同一屏**：停止，**不要**继续软匹配细项或臆造间距/颜色差异；**不要**调用 `show_design_diffs`（中途推 1 条再推完整列表会导致比对窗差异数跳动），只在聊天里提示：
 
 > Figma 页面和 Target 的页面对不上。  
 > 设计稿：`{figmaFrameName}`（`{nodeId}`）  
@@ -94,24 +94,24 @@ description: >-
 ## 比对链路（闸门 0–4 通过后严格按序）
 
 1. `get_target_tab` — 再确认一次目标页  
-2. `screenshot_design_width` — 保证 `offsetWidth === 375`；**保留返回的 `pngBase64`**（页面图）  
+2. `screenshot_design_width` — 保证 `offsetWidth === 375`；**页面完整截图会缓存在扩展内**（返回里的 `pngBase64` 可能截断，仅供你预览，**不要再回传**）  
 3. `get_dom_snapshot` — 几何/间距（gapBelow、gapRight）、宽高、padding/margin、圆角、边框、color、fontSize、lineHeight、fontWeight、opacity、disabled  
 4. Figma：`get_screenshot`（整页 Frame）拿到设计稿图 + `get_design_context` / `get_metadata`（先读 figma-design-to-code skill）  
 5. **同一屏复核**（闸门 4）：对不上则停止并提示，不进入细项比对  
-6. AI 软匹配节点（文案仅作锚点；**不比对文字内容与 font-family**）  
-7. `show_design_diffs` — **必须**带上：
-   - `figmaImageBase64`：Figma `get_screenshot` 的图（base64 或 data URL）
-   - `pageImageBase64`：步骤 2 的 `pngBase64`
+6. AI 软匹配节点（文案仅作锚点；**不比对文字内容与 font-family**；**不比对选项卡/列表当前选中哪一项**，见下方「交互选中态」）  
+7. `show_design_diffs` — **整次比对只调用一次**（禁止先推 1 条再推完整列表）。**必须**带上：
+   - `figmaImageBase64` 和/或 `figmaImageUrl`：Figma `get_screenshot` 的图（有 URL 优先传 URL）
    - `diffs`：属性差异数组
    - `figmaNodeId` / `figmaFileKey` / `pageUrl`（可选）
+   - **禁止**传 `pageImageBase64`（页面图用步骤 2 缓存在扩展里的完整截图）
    
-   调用后扩展会：**打开侧边栏工具箱「Figma 比对」页**（`sl-image-comparer` 滑块对比 + 差异列表），不再开浏览器新窗口。
+   调用后扩展会：在 **Panel 内用 `sl-dialog`** 打开「Figma ↔ 页面比对」（`sl-image-comparer` + 差异列表），不开浏览器新窗口、不进工具箱。
 8. **聊天输出（强制）**：
    - **禁止**在聊天里贴差异表格、大段 markdown table、或再贴两张对比图。
    - 只简短提示用户去插件查看，例如：
 
-> 比对完成，已在扩展工具箱「Figma 比对」打开滑块对比与差异列表。  
-> 请到侧边栏 / Panel → 工具箱 → Figma 比对查看；点击差异项可在目标页高亮对应节点。  
+> 比对完成，已在扩展 Panel 打开「Figma ↔ 页面比对」对话框。  
+> 请查看滑块对比与差异列表；悬停差异项可在目标页高亮对应节点。  
 > 共 {n} 处属性差异。
 
 ## 比对范围
@@ -121,17 +121,48 @@ description: >-
   - 尺寸：`rect.w` / `rect.h`
   - 盒模型：`padding` / `margin`
   - 圆角：`borderRadius`
-  - 边框：`border.width` / `border.color`
+  - 边框：`border.width` / `border.color`（**仅比同一交互态下的样式**；见下「交互选中态」）
   - 颜色：文字 `color`、背景 `backgroundColor`
   - 字体度量：`fontWeight`、`fontSize`、`lineHeight`（不比 font-family）
   - 透明度：`opacity`
-  - 禁用态：`state.disabled` 及对应禁用样式（如下一步灰底）
+  - 禁用态：`state.disabled` 及对应禁用样式（如下一步灰底）——这是组件能力/样式规范，**不是**「当前点了哪一项」
   - 关键布局错位（区块相对位置，用相对间距而非绝对 y）
 - **不要比**：
   - 接口动态文案内容、font-family
   - 状态栏 / Home Indicator 等设备壳
   - 装饰图像素、box-shadow、letter-spacing
   - 绝对 `y`（页面有步骤条时与 Figma 坐标系易错位，应比相对间距）
+  - **交互选中态 / 展开态**（见下一节）
+
+## 交互选中态（强制：禁止当还原度错误）
+
+设计稿是**某一时刻的静态示意**（例如示意「网上转账开户」选中并展开材料说明）；页面上用户可能选了另一项（如「CA见证开户」）。  
+这是**运行时交互状态不同**，不是实现还原错误。
+
+**禁止**因此上报差异，包括但不限于：
+
+| 误报类型 | 示例 |
+|----------|------|
+| 谁被选中 | 设计稿选中第 1 项，页面选中第 2/3 项 → **不算错** |
+| 选中带来的边框/底色 | 设计稿某卡有黑边，页面该卡未选中故 `border.color: transparent` → **不算错** |
+| 选中带来的展开/折叠 | 设计稿展开「请准备以下材料」，页面因选了别的卡未展开 → **不算错** |
+| 自造 prop | 如 `selectedState: 未选中 → 选中` → **禁止写入 diffs** |
+
+**正确做法**：
+
+1. 先识别互斥选项组（开户类型卡、radio、segment、tab 等）。
+2. 比对时按**角色**对齐（如「网上转账卡」「CA 卡」「智方便卡」），不要用「当前 DOM 里带黑边的那张」去对设计稿里示意选中的那张。
+3. 对每张卡，只比**该卡在未选中/选中规范本身是否实现得对**中与状态无关的稳定样式（图标、标题字号、默认间距等）；或明确只比「未选中态」样式，**不要**拿页面当前选中项的样式去打未选中项的设计稿节点。
+4. 若用户**没有**要求「必须还原到设计稿示意的那一项选中」，聊天里最多一句带过「当前选中项与设计稿示意不同，属交互态，未计入差异」，**不要**塞进 `show_design_diffs`。
+5. 仅当用户明确说「请点到某某选项再比 / 要比选中态样式」时，才先操作页面切到同一选中项，再比该态下的边框/展开区。
+
+反例（不要这样报）：
+
+> `div.select-item:nth-of-type(3)` 智方便…  
+> `selectedState`: 当前 未选中 → 设计稿 选中  
+> `border.color`: 当前 transparent → 设计稿 #181818  
+
+（设计稿示意的是另一项选中；页面选了 CA，第 3 项未选中完全正常。）
 
 ## 禁止
 
@@ -139,4 +170,5 @@ description: >-
 - Target 未设置时用「当前激活 tab」凑合（除非用户明确说用激活 tab）  
 - 对非整页小组件链接硬比一整页  
 - Figma 与 Target 不是同一屏时仍做细项比对或编造还原度差异  
+- 把选项卡/列表「当前选中哪一项」及由此产生的边框、展开、高亮当成还原度错误写入 diffs  
 - 比对完成后在聊天里输出差异表格或重复贴图（结果以扩展弹窗为准）  

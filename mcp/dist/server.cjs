@@ -25030,23 +25030,23 @@ function createMcpServer() {
   mcpServer.registerTool(
     "show_design_diffs",
     {
-      description: "Push Figma-vs-page compare result to the Chrome extension: opens the toolbox\u300CFigma \u6BD4\u5BF9\u300Dtab (not a new browser window) with sl-image-comparer + property diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension toolbox \u2014 do NOT dump a markdown table in chat.",
+      description: "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page screenshot is already cached by screenshot_design_width \u2014 do NOT pass pageImageBase64. Pass figmaImageBase64 and/or figmaImageUrl + diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Tell user to view Panel dialog \u2014 do NOT dump markdown tables in chat.",
       inputSchema: {
         pageUrl: stringType().optional(),
         figmaNodeId: stringType().optional(),
         figmaFileKey: stringType().optional(),
-        figmaImageBase64: stringType().optional().describe("Figma frame screenshot base64 (from Figma get_screenshot); data: URL prefix optional"),
-        pageImageBase64: stringType().optional().describe("Page screenshot base64 from screenshot_design_width.pngBase64"),
+        figmaImageBase64: stringType().optional().describe("Figma frame screenshot base64 or data URL (from Figma get_screenshot)"),
+        figmaImageUrl: stringType().optional().describe("Figma frame image URL if available (preferred over re-sending huge base64)"),
+        pageImageBase64: stringType().optional().describe("DEPRECATED \u2014 ignored; extension uses cached page shot from screenshot_design_width"),
         diffs: arrayType(recordType(anyType())).describe(
           "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }]"
         )
       }
     },
     async (args) => {
-      const resolved = await resolveLocalFileFields(args, [
-        "figmaImageBase64",
-        "pageImageBase64"
-      ]);
+      const resolved = await resolveLocalFileFields(args, ["figmaImageBase64"]);
+      delete resolved.pageImageBase64;
+      delete resolved.pageImage;
       const data = await sendToExtension("show_design_diffs", resolved, {
         timeoutMs: 6e4
       });

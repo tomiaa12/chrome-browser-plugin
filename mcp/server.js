@@ -493,7 +493,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "show_design_diffs",
     {
       description:
-        "Push Figma-vs-page compare result to the Chrome extension: opens the toolbox「Figma 比对」tab (not a new browser window) with sl-image-comparer + property diffs. Requires「设为 MCP 目标页」. Always pass figmaImageBase64 + pageImageBase64. After calling, tell the user to view the extension toolbox — do NOT dump a markdown table in chat.",
+        "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page screenshot is already cached by screenshot_design_width — do NOT pass pageImageBase64. Pass figmaImageBase64 and/or figmaImageUrl + diffs. Requires「设为 MCP 目标页」. Tell user to view Panel dialog — do NOT dump markdown tables in chat.",
       inputSchema: {
         pageUrl: z.string().optional(),
         figmaNodeId: z.string().optional(),
@@ -501,11 +501,15 @@ function createMcpServer() {  const mcpServer = new McpServer({
         figmaImageBase64: z
           .string()
           .optional()
-          .describe("Figma frame screenshot base64 (from Figma get_screenshot); data: URL prefix optional"),
+          .describe("Figma frame screenshot base64 or data URL (from Figma get_screenshot)"),
+        figmaImageUrl: z
+          .string()
+          .optional()
+          .describe("Figma frame image URL if available (preferred over re-sending huge base64)"),
         pageImageBase64: z
           .string()
           .optional()
-          .describe("Page screenshot base64 from screenshot_design_width.pngBase64"),
+          .describe("DEPRECATED — ignored; extension uses cached page shot from screenshot_design_width"),
         diffs: z
           .array(z.record(z.any()))
           .describe(
@@ -514,10 +518,10 @@ function createMcpServer() {  const mcpServer = new McpServer({
       },
     },
     async (args) => {
-      const resolved = await resolveLocalFileFields(args, [
-        "figmaImageBase64",
-        "pageImageBase64",
-      ]);
+      const resolved = await resolveLocalFileFields(args, ["figmaImageBase64"]);
+      // 页面图由扩展缓存，去掉 AI 回传避免截断图覆盖缓存
+      delete resolved.pageImageBase64;
+      delete resolved.pageImage;
       const data = await sendToExtension("show_design_diffs", resolved, {
         timeoutMs: 60000,
       });
