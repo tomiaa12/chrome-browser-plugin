@@ -1,4 +1,4 @@
-# chrome-browser-plugin · AI Plugin
+# chrome-browser-plugin
 
 ## 目录
 

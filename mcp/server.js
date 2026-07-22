@@ -448,6 +448,27 @@ function createMcpServer() {  const mcpServer = new McpServer({
   );
 
   mcpServer.registerTool(
+    "set_design_width",
+    {
+      description:
+        "Enable design-size viewport (default 375×812) on the pinned MCP target tab without screenshot. Requires「设为 MCP 目标页」first.",
+      inputSchema: {
+        width: z.number().int().optional().describe("Design width, default 375"),
+        height: z.number().int().optional().describe("Design height, default 812"),
+        timeoutMs: z.number().int().optional().describe("Default 30000"),
+      },
+    },
+    async ({ width, height, timeoutMs }) => {
+      const data = await sendToExtension(
+        "set_design_width",
+        { width, height },
+        { timeoutMs: timeoutMs || 30000 },
+      );
+      return toolText(data);
+    },
+  );
+
+  mcpServer.registerTool(
     "screenshot_design_width",
     {
       description:
@@ -493,7 +514,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "show_design_diffs",
     {
       description:
-        "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page screenshot is already cached by screenshot_design_width — do NOT pass pageImageBase64. Pass figmaImageBase64 and/or figmaImageUrl + diffs. Requires「设为 MCP 目标页」. Tell user to view Panel dialog — do NOT dump markdown tables in chat.",
+        "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page shot is cached by screenshot_design_width — do NOT pass pageImageBase64. Prefer putting the Figma get_screenshot https URL into figmaImageBase64 (URL accepted). Optional figmaImageUrl can mirror the same URL. After call, verify hasFigmaImage===true or retry. Requires「设为 MCP 目标页」. Tell user to view Panel dialog — do NOT dump markdown tables in chat.",
       inputSchema: {
         pageUrl: z.string().optional(),
         figmaNodeId: z.string().optional(),
@@ -501,11 +522,13 @@ function createMcpServer() {  const mcpServer = new McpServer({
         figmaImageBase64: z
           .string()
           .optional()
-          .describe("Figma frame screenshot base64 or data URL (from Figma get_screenshot)"),
+          .describe(
+            "PREFERRED: Figma get_screenshot https URL (extension accepts URL here). Also accepts raw base64 / data URL. Avoid huge base64 when URL works.",
+          ),
         figmaImageUrl: z
           .string()
           .optional()
-          .describe("Figma frame image URL if available (preferred over re-sending huge base64)"),
+          .describe("Optional mirror of the same Figma image URL; prefer also setting figmaImageBase64 to the URL"),
         pageImageBase64: z
           .string()
           .optional()
@@ -513,7 +536,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
         diffs: z
           .array(z.record(z.any()))
           .describe(
-            "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }]",
+            "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, note?, issues: [{ prop, actual, expected, unit? }] }]. Dedupe same-pattern issues; ignore gapBelow<0 and ≤1px noise.",
           ),
       },
     },

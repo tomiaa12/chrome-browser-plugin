@@ -24990,6 +24990,25 @@ function createMcpServer() {
     }
   );
   mcpServer.registerTool(
+    "set_design_width",
+    {
+      description: "Enable design-size viewport (default 375\xD7812) on the pinned MCP target tab without screenshot. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst.",
+      inputSchema: {
+        width: numberType().int().optional().describe("Design width, default 375"),
+        height: numberType().int().optional().describe("Design height, default 812"),
+        timeoutMs: numberType().int().optional().describe("Default 30000")
+      }
+    },
+    async ({ width, height, timeoutMs }) => {
+      const data = await sendToExtension(
+        "set_design_width",
+        { width, height },
+        { timeoutMs: timeoutMs || 3e4 }
+      );
+      return toolText(data);
+    }
+  );
+  mcpServer.registerTool(
     "screenshot_design_width",
     {
       description: "Capture full-page PNG of the pinned MCP target tab at design width (default 375). Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300Dfirst. If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
@@ -25030,16 +25049,18 @@ function createMcpServer() {
   mcpServer.registerTool(
     "show_design_diffs",
     {
-      description: "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page screenshot is already cached by screenshot_design_width \u2014 do NOT pass pageImageBase64. Pass figmaImageBase64 and/or figmaImageUrl + diffs. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Tell user to view Panel dialog \u2014 do NOT dump markdown tables in chat.",
+      description: "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page shot is cached by screenshot_design_width \u2014 do NOT pass pageImageBase64. Prefer putting the Figma get_screenshot https URL into figmaImageBase64 (URL accepted). Optional figmaImageUrl can mirror the same URL. After call, verify hasFigmaImage===true or retry. Requires\u300C\u8BBE\u4E3A MCP \u76EE\u6807\u9875\u300D. Tell user to view Panel dialog \u2014 do NOT dump markdown tables in chat.",
       inputSchema: {
         pageUrl: stringType().optional(),
         figmaNodeId: stringType().optional(),
         figmaFileKey: stringType().optional(),
-        figmaImageBase64: stringType().optional().describe("Figma frame screenshot base64 or data URL (from Figma get_screenshot)"),
-        figmaImageUrl: stringType().optional().describe("Figma frame image URL if available (preferred over re-sending huge base64)"),
+        figmaImageBase64: stringType().optional().describe(
+          "PREFERRED: Figma get_screenshot https URL (extension accepts URL here). Also accepts raw base64 / data URL. Avoid huge base64 when URL works."
+        ),
+        figmaImageUrl: stringType().optional().describe("Optional mirror of the same Figma image URL; prefer also setting figmaImageBase64 to the URL"),
         pageImageBase64: stringType().optional().describe("DEPRECATED \u2014 ignored; extension uses cached page shot from screenshot_design_width"),
         diffs: arrayType(recordType(anyType())).describe(
-          "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, issues: [{ prop, actual, expected, unit? }] }]"
+          "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, note?, issues: [{ prop, actual, expected, unit? }] }]. Dedupe same-pattern issues; ignore gapBelow<0 and \u22641px noise."
         )
       }
     },
