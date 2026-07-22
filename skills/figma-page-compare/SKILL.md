@@ -117,21 +117,21 @@ description: >-
 ## 比对范围
 
 - **要比**：
-  - 间距：`gapBelow` / `gapRight`、相对左右边距（常用 `rect.x≈16`）
-  - 尺寸：`rect.w` / `rect.h`
-  - 盒模型：`padding` / `margin`
+  - 间距：`gapBelow`（与下方相邻节点的间距）/ `gapRight`（与右侧相邻节点的间距）、相对左右边距（常用 `rect.x≈16`，即相对页面左边的 x 偏移）
+  - 尺寸：`rect.w`（宽度）/ `rect.h`（高度）
+  - 盒模型：`padding`（内边距）/ `margin`（外边距）
   - 圆角：`borderRadius`
-  - 边框：`border.width` / `border.color`（**仅比同一交互态下的样式**；见下「交互选中态」）
+  - 边框：`border.width`（边框宽度）/ `border.color`（边框颜色）（**仅比同一交互态下的样式**；见下「交互选中态」）
   - 颜色：文字 `color`、背景 `backgroundColor`
-  - 字体度量：`fontWeight`、`fontSize`、`lineHeight`（不比 font-family）
+  - 字体度量：`fontWeight`（字重）、`fontSize`（字号）、`lineHeight`（行高）（不比 font-family / 字体族）
   - 透明度：`opacity`
   - 禁用态：`state.disabled` 及对应禁用样式（如下一步灰底）——这是组件能力/样式规范，**不是**「当前点了哪一项」
-  - 关键布局错位（区块相对位置，用相对间距而非绝对 y）
+  - 关键布局错位（区块相对位置，用相对间距而非绝对 y / 纵坐标）
 - **不要比**：
-  - 接口动态文案内容、font-family
+  - 接口动态文案内容、font-family（字体族）
   - 状态栏 / Home Indicator 等设备壳
-  - 装饰图像素、box-shadow、letter-spacing
-  - 绝对 `y`（页面有步骤条时与 Figma 坐标系易错位，应比相对间距）
+  - 装饰图像素、box-shadow（阴影）、letter-spacing（字距）
+  - 绝对 `y`（纵坐标；页面有步骤条时与 Figma 坐标系易错位，应比相对间距）
   - **交互选中态 / 展开态**（见下一节）
 
 ## 交互选中态（强制：禁止当还原度错误）
