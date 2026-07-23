@@ -147,7 +147,7 @@ description: >-
   - 内边距（`padding`）/ 外边距（`margin`）
   - 圆角（`borderRadius`）
   - 边框宽度（`border.width`）/ 边框颜色（`border.color`）（**仅同一交互态**；见「交互选中态」）
-  - 文字颜色（`color`）/ 背景色（`backgroundColor`）——先归一 6 位 hex 再比；**写入 diffs 时按下方「颜色变量」规则**
+  - 文字颜色（`color`）/ 背景色（`backgroundColor`）——先归一 6 位 hex 再比；`actual` / `expected` **直接写小写 hex**（如 `#9c9c9c`）。`transparent` / `#00000000` / `rgba(0,0,0,0)` 等价。Token 名（`--fsw-*`）由扩展差异列表展示时映射，**不要**在 skill 里查 token 或改写为变量名
   - 字重（`fontWeight`）/ 字号（`fontSize`）/ 行高（`lineHeight`）（不比 font-family）
   - 透明度（`opacity`）
   - 禁用态（`state.disabled`）及禁用样式（如下一步灰底）——须在协议勾选等表单完成态与设计稿一致时再比；不是「选中了哪一项」
@@ -159,16 +159,6 @@ description: >-
   - 装饰图像素、box-shadow、letter-spacing
   - 绝对 `y`
   - **交互选中态 / 展开态**（见下一节）
-
-### 颜色变量（强制）
-
-同目录 [`fsw-tokens.css`](./fsw-tokens.css) 为设计 token。比对颜色并写入 `issues` 时：
-
-1. 把两侧颜色归一成小写 6 位 hex（`#rgb` → `#rrggbb`；`transparent` / `#00000000` / `rgba(0,0,0,0)` 等价）。
-2. 在 `fsw-tokens.css` 的 `--fsw-palette-*` / `--fsw-color-*` 里查找**同 hex** 的变量。
-3. **命中**：`actual` / `expected` 写变量名，如 `--fsw-palette-neutral300`（可带 `var(...)` 亦可只写变量名，全文统一一种）。
-4. **未命中**：才写 Figma/页面原始 hex（如 `#87ceeb`）。
-5. 优先用 semantic（`--fsw-color-*`）若与 palette 同色；无 semantic 再用 palette。
 
 ### gap / 坐标规则
 
@@ -227,7 +217,7 @@ description: >-
   "figmaName": "选择开户证件类型",
   "note": "可选；同类共 N 处时写明",
   "issues": [
-    { "prop": "文字颜色", "actual": "--fsw-palette-danger50", "expected": "--fsw-color-text-disabled" },
+    { "prop": "文字颜色", "actual": "#f5433d", "expected": "#9c9c9c" },
     { "prop": "左边距", "actual": 16, "expected": 24, "unit": "px" }
   ]
 }
