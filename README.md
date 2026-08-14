@@ -23,7 +23,7 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 
 ## 包含能力
 
-- **MCP**：控制配套 Chrome 扩展（截图、DOM 快照、`show_design_diffs` 等）
+- **MCP**：控制配套 Chrome 扩展（截图、DOM 快照、页面环境/用户/流程、接口详情与参考文档、手机号快捷登录、Mock 管理、`show_design_diffs` 等）
 - **Skill**：`figma-page-compare`（Figma ↔ 页面还原度比对）
 
 ## 使用前

@@ -556,19 +556,317 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_network_requests",
     {
       description:
-        "Get cached fetch/XHR captures for the pinned MCP target tab. Requires「设为 MCP 目标页」first.",
+        "Get cached network captures for the pinned MCP target tab: page fetch/XHR plus chrome.webRequest (document/script/image/etc). Requires「设为 MCP 目标页」first.",
       inputSchema: {
         urlPattern: z.string().optional().describe("Filter by URL substring"),
+        method: z.string().optional().describe("HTTP method, e.g. GET"),
+        kind: z
+          .string()
+          .optional()
+          .describe("fetch, xhr, or webRequest type such as script/image/document"),
+        sinceMs: z.number().int().optional().describe("Only entries captured at/after this epoch ms"),
+        includeBody: z.boolean().optional().describe("Include request/response body; default true"),
         limit: z.number().int().optional().describe("Default 50"),
       },
     },
-    async ({ urlPattern, limit }) => {
-      const data = await sendToExtension("get_network_requests", {
-        urlPattern,
-        limit,
-      });
-      return toolText(data);
+    async (args) => toolText(await sendToExtension("get_network_requests", args)),
+  );
+
+  mcpServer.registerTool(
+    "get_page_context",
+    {
+      description:
+        "Get the pinned page environment (normal/DevTools/Chii), current logged-in user, language, JSBridge/dark/mock/design-size state, and current flow summary. Requires the extension Panel for Chii/flow data.",
+      inputSchema: {},
     },
+    async () => toolText(await sendToExtension("get_page_context", {})),
+  );
+
+  mcpServer.registerTool(
+    "set_page_settings",
+    {
+      description:
+        "Set pinned page controls exposed by the extension Panel: language, simulated in-app JSBridge, dark skin, design-size viewport, and Mock master switch. Chii is supported except design-size.",
+      inputSchema: {
+        language: z.enum(["zhCn", "zhTc", "en"]).optional(),
+        jsBridge: z.boolean().optional(),
+        darkSkin: z.boolean().optional(),
+        designSize: z.boolean().optional(),
+        mockEnabled: z.boolean().optional(),
+        width: z.number().int().optional().describe("Design viewport width, default 375"),
+        height: z.number().int().optional().describe("Design viewport height, default 812"),
+        reload: z.boolean().optional().describe("Reload after storage-backed changes; default true"),
+      },
+    },
+    async (args) =>
+      toolText(
+        await sendToExtension("set_page_settings", args, { timeoutMs: 60000 }),
+      ),
+  );
+
+  mcpServer.registerTool(
+    "quick_sms_login",
+    {
+      description:
+        "Log the pinned page in by phone using the Panel's quick SMS login capability, then apply the returned session storage plan. Non-production environments only; supports Chii when its Panel connection is active.",
+      inputSchema: {
+        phone: z.string().min(1),
+        areaCode: z.string().optional().describe('Default "+86"'),
+        env: z.enum(["sit", "uat", "dev", "gray"]).optional().describe("Default sit"),
+        code: z.string().optional().describe("Test SMS code, default 123456"),
+      },
+    },
+    async (args) =>
+      toolText(
+        await sendToExtension("quick_sms_login", args, { timeoutMs: 120000 }),
+      ),
+  );
+
+  mcpServer.registerTool(
+    "list_panel_requests",
+    {
+      description:
+        "List the requests currently shown/captured by the extension Panel, including DevTools and Chii data. Each item includes tags for jsBridge / mock / chii / whistle. Returns stable rowId values for detail/document lookup.",
+      inputSchema: {
+        urlPattern: z.string().optional(),
+        type: z
+          .string()
+          .optional()
+          .describe("Panel resource type, e.g. xhr, document, script, image, websocket"),
+        jsBridge: z
+          .boolean()
+          .optional()
+          .describe("If true, only JSBridge calls; if false, exclude them"),
+        mock: z
+          .boolean()
+          .optional()
+          .describe("If true, only Mock-hit requests; if false, exclude them"),
+        limit: z.number().int().min(1).max(200).optional().describe("Default 50"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("list_panel_requests", args)),
+  );
+
+  const requestSelectorSchema = {
+    rowId: z.union([z.string(), z.number()]).optional(),
+    url: z.string().optional().describe("Substring match; newest match wins"),
+    index: z.number().int().min(0).optional(),
+  };
+
+  mcpServer.registerTool(
+    "get_panel_request",
+    {
+      description:
+        "Get one Panel request's headers, request/response data and optionally decrypted response body. Select by rowId (preferred), URL substring, or zero-based index.",
+      inputSchema: {
+        ...requestSelectorSchema,
+        includeResponseBody: z.boolean().optional().describe("Default true"),
+        decrypt: z.boolean().optional().describe("Default true"),
+      },
+    },
+    async (args) =>
+      toolText(
+        await sendToExtension("get_panel_request", args, { timeoutMs: 60000 }),
+      ),
+  );
+
+  mcpServer.registerTool(
+    "get_api_document",
+    {
+      description:
+        "Get the bundled API document matched to a captured Panel request. generatedAt and documentation timestamps are reference-only — trust the live response, not the doc time.",
+      inputSchema: requestSelectorSchema,
+    },
+    async (args) => toolText(await sendToExtension("get_api_document", args)),
+  );
+
+  mcpServer.registerTool(
+    "get_flow_nodes",
+    {
+      description:
+        "Get the current Panel flow-chart route, active node, and all flow nodes. Works with the Panel's normal, DevTools, and Chii route context.",
+      inputSchema: {},
+    },
+    async () => toolText(await sendToExtension("get_flow_nodes", {})),
+  );
+
+  mcpServer.registerTool(
+    "manage_mock_config",
+    {
+      description:
+        "List/get/create/update/delete Mock interfaces, enable/disable an interface, or upsert/delete a scenario. Mutations require a write-authorized Mock data folder in the extension; changes are written to disk and synced to the runtime mirror.",
+      inputSchema: {
+        action: z
+          .enum([
+            "list",
+            "get",
+            "create",
+            "update",
+            "delete",
+            "set_enabled",
+            "upsert_scenario",
+            "delete_scenario",
+          ])
+          .describe("Mock operation"),
+        name: z.string().optional().describe("Interface name"),
+        newName: z.string().optional().describe("Rename target for update"),
+        groupId: z.string().optional(),
+        enabled: z.boolean().optional(),
+        config: z.record(z.any()).optional(),
+        fileName: z.string().optional(),
+        content: z.string().optional(),
+        activate: z.boolean().optional().describe("Apply upserted scenario; default true"),
+      },
+    },
+    async (args) =>
+      toolText(
+        await sendToExtension("manage_mock_config", args, {
+          timeoutMs: 120000,
+        }),
+      ),
+  );
+
+  mcpServer.registerTool(
+    "snapshot",
+    {
+      description:
+        "Accessibility snapshot of the pinned page with stable refs (e1, e2…). Use refs with click/fill/type/scroll. Requires「设为 MCP 目标页」or an active Chii Panel.",
+      inputSchema: {
+        maxNodes: z.number().int().optional().describe("Default 120, max 400"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("snapshot", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "click",
+    {
+      description: "Click a snapshot ref on the pinned page. Call snapshot first.",
+      inputSchema: {
+        ref: z.string().describe("Ref from snapshot, e.g. e3"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("click", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "fill",
+    {
+      description: "Set an input/textarea value by snapshot ref in one shot.",
+      inputSchema: {
+        ref: z.string(),
+        value: z.string(),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("fill", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "type",
+    {
+      description: "Type into a snapshot ref character by character. clear defaults to true.",
+      inputSchema: {
+        ref: z.string(),
+        text: z.string(),
+        delay: z.number().int().optional().describe("Per-key delay ms, default 20"),
+        clear: z.boolean().optional().describe("Clear existing value first; default true"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("type", args, { timeoutMs: 60000 })),
+  );
+
+  mcpServer.registerTool(
+    "press_key",
+    {
+      description: "Dispatch a key (Enter, Tab, Escape, Backspace, ArrowDown…) on a ref or the focused element.",
+      inputSchema: {
+        key: z.string(),
+        ref: z.string().optional(),
+        ctrlKey: z.boolean().optional(),
+        metaKey: z.boolean().optional(),
+        altKey: z.boolean().optional(),
+        shiftKey: z.boolean().optional(),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("press_key", args, { timeoutMs: 15000 })),
+  );
+
+  mcpServer.registerTool(
+    "scroll",
+    {
+      description:
+        "Scroll the page or a snapshot ref. With ref and no x/y, scrolls the element into view. Without ref, scrolls the window (default y=400).",
+      inputSchema: {
+        ref: z.string().optional(),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        block: z.enum(["start", "center", "end", "nearest"]).optional(),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("scroll", args, { timeoutMs: 15000 })),
+  );
+
+  mcpServer.registerTool(
+    "tabs",
+    {
+      description:
+        "List/create/close/select Chrome tabs. new/select pin the tab as MCP target by default.",
+      inputSchema: {
+        action: z.enum(["list", "new", "close", "select"]).describe("Tab operation"),
+        url: z.string().optional().describe("For new"),
+        tabId: z.number().int().optional().describe("For close/select"),
+        active: z.boolean().optional().describe("Whether new tab is focused; default true"),
+        pin: z.boolean().optional().describe("Pin as MCP target; default true for new/select"),
+        currentWindow: z.boolean().optional().describe("list current window only; default true"),
+      },
+    },
+    async (args) => toolText(await sendToExtension("tabs", args)),
+  );
+
+  mcpServer.registerTool(
+    "wait",
+    {
+      description:
+        "Wait for a selector, snapshot ref, URL substring, or network idle on the pinned page.",
+      inputSchema: {
+        kind: z
+          .enum(["selector", "ref", "url", "network_idle"])
+          .optional()
+          .describe("Inferred from selector/url when omitted; otherwise network_idle"),
+        selector: z.string().optional(),
+        ref: z.string().optional(),
+        url: z.string().optional().describe("URL substring"),
+        quietMs: z.number().int().optional().describe("network_idle quiet window, default 500"),
+        timeoutMs: z.number().int().optional().describe("Default 15000"),
+      },
+    },
+    async (args) =>
+      toolText(
+        await sendToExtension("wait", args, {
+          timeoutMs: (args.timeoutMs || 15000) + 5000,
+        }),
+      ),
+  );
+
+  mcpServer.registerTool(
+    "get_console_logs",
+    {
+      description:
+        "Read recent console logs from the pinned page (injected hook) or Chii Runtime.consoleAPICalled buffer.",
+      inputSchema: {
+        level: z.enum(["log", "info", "warn", "error", "debug"]).optional(),
+        limit: z.number().int().optional().describe("Default 80"),
+        clear: z.boolean().optional().describe("Clear buffer after read"),
+      },
+    },
+    async (args) => toolText(await sendToExtension("get_console_logs", args)),
   );
 
   return mcpServer;
