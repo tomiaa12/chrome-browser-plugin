@@ -340,6 +340,14 @@ function createMcpServer() {  const mcpServer = new McpServer({
     version: "1.0.0",
   });
 
+  const optionalTabId = z
+    .number()
+    .int()
+    .optional()
+    .describe(
+      "Chrome tab id. Omit to use the current active tab. Copy from the extension Panel 「复制 tabId」.",
+    );
+
   mcpServer.registerTool(
     "ping",
     {
@@ -382,7 +390,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_target_tab",
     {
       description:
-        "Get the pinned MCP target tab (set via extension panel 「设为 MCP 目标页」). Page tools require this to be set.",
+        "Legacy: read an optionally pinned tab. Page tools no longer require pinning; they use tabId or the current active tab. Prefer get_active_tab or tabs list.",
       inputSchema: {},
     },
     async () => {
@@ -395,7 +403,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "set_target_tab",
     {
       description:
-        "Pin or clear the MCP target tab. Usually set from the extension panel「设为 MCP 目标页」; optional for AI. Page tools fail until pinned.",
+        "Legacy optional pin. Page tools do not require this. Prefer passing tabId to each tool, or copy tabId from the extension Panel.",
       inputSchema: {
         tabId: z.number().int().optional().describe("Tab id to pin; omit to pin current active tab"),
         clear: z.boolean().optional().describe("If true, clear pinned target"),
@@ -411,16 +419,17 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "run_automation",
     {
       description:
-        "Run Automation code in the pinned MCP target tab MAIN world. Requires「设为 MCP 目标页」first. Supports assertVisible/assertText (throws on failure).",
+        "Run Automation code in a tab MAIN world (tabId or current active tab). Supports assertVisible/assertText (throws on failure).",
       inputSchema: {
+        tabId: optionalTabId,
         code: z.string().describe("Automation JS, e.g. await Automation.click('.btn')"),
         timeoutMs: z.number().int().optional().describe("MCP wait timeout, default 120000"),
       },
     },
-    async ({ code, timeoutMs }) => {
+    async ({ tabId, code, timeoutMs }) => {
       const data = await sendToExtension(
         "run_automation",
-        { code },
+        { tabId, code },
         { timeoutMs: timeoutMs || 120000 },
       );
       return toolText(data);
@@ -431,16 +440,17 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "screenshot_tab",
     {
       description:
-        "Capture full-page PNG of the pinned MCP target tab (returns base64, may truncate). Requires「设为 MCP 目标页」first.",
+        "Capture full-page PNG of a tab (tabId or current active tab). Returns base64, may truncate.",
       inputSchema: {
+        tabId: optionalTabId,
         maxBase64Length: z.number().int().optional().describe("Default 120000"),
         timeoutMs: z.number().int().optional().describe("Default 60000"),
       },
     },
-    async ({ maxBase64Length, timeoutMs }) => {
+    async ({ tabId, maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_tab",
-        { maxBase64Length },
+        { tabId, maxBase64Length },
         { timeoutMs: timeoutMs || 60000 },
       );
       return toolText(data);
@@ -451,17 +461,18 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "set_design_width",
     {
       description:
-        "Enable design-size viewport (default 375×812) on the pinned MCP target tab without screenshot. Requires「设为 MCP 目标页」first.",
+        "Enable design-size viewport (default 375×812) on a tab (tabId or current active tab) without screenshot.",
       inputSchema: {
+        tabId: optionalTabId,
         width: z.number().int().optional().describe("Design width, default 375"),
         height: z.number().int().optional().describe("Design height, default 812"),
         timeoutMs: z.number().int().optional().describe("Default 30000"),
       },
     },
-    async ({ width, height, timeoutMs }) => {
+    async ({ tabId, width, height, timeoutMs }) => {
       const data = await sendToExtension(
         "set_design_width",
-        { width, height },
+        { tabId, width, height },
         { timeoutMs: timeoutMs || 30000 },
       );
       return toolText(data);
@@ -472,18 +483,19 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "screenshot_design_width",
     {
       description:
-        "Capture full-page PNG of the pinned MCP target tab at design width (default 375). Requires「设为 MCP 目标页」first. If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
+        "Capture full-page PNG of a tab (tabId or current active tab) at design width (default 375). If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
       inputSchema: {
+        tabId: optionalTabId,
         width: z.number().int().optional().describe("Design width, default 375"),
         height: z.number().int().optional().describe("Design height, default 812"),
         maxBase64Length: z.number().int().optional().describe("Default 120000"),
         timeoutMs: z.number().int().optional().describe("Default 90000"),
       },
     },
-    async ({ width, height, maxBase64Length, timeoutMs }) => {
+    async ({ tabId, width, height, maxBase64Length, timeoutMs }) => {
       const data = await sendToExtension(
         "screenshot_design_width",
-        { width, height, maxBase64Length },
+        { tabId, width, height, maxBase64Length },
         { timeoutMs: timeoutMs || 90000 },
       );
       return toolText(data);
@@ -494,16 +506,17 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_dom_snapshot",
     {
       description:
-        "DOM snapshot of the pinned MCP target tab for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Requires「设为 MCP 目标页」first. Prefer after screenshot_design_width.",
+        "DOM snapshot of a tab (tabId or current active tab) for Figma compare: rect/spacing (gapBelow/gapRight), size, padding/margin, borderRadius, border, color/backgroundColor, fontSize/lineHeight/fontWeight, opacity, disabled. Prefer after screenshot_design_width.",
       inputSchema: {
+        tabId: optionalTabId,
         maxNodes: z.number().int().optional().describe("Default 120"),
         timeoutMs: z.number().int().optional().describe("Default 60000"),
       },
     },
-    async ({ maxNodes, timeoutMs }) => {
+    async ({ tabId, maxNodes, timeoutMs }) => {
       const data = await sendToExtension(
         "get_dom_snapshot",
-        { maxNodes },
+        { tabId, maxNodes },
         { timeoutMs: timeoutMs || 60000 },
       );
       return toolText(data);
@@ -514,8 +527,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "show_design_diffs",
     {
       description:
-        "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page shot is cached by screenshot_design_width — do NOT pass pageImageBase64. Prefer putting the Figma get_screenshot https URL into figmaImageBase64 (URL accepted). Optional figmaImageUrl can mirror the same URL. After call, verify hasFigmaImage===true or retry. Requires「设为 MCP 目标页」. Tell user to view Panel dialog — do NOT dump markdown tables in chat.",
+        "Push Figma-vs-page compare result to the Chrome extension Panel sl-dialog. Page shot is cached by screenshot_design_width — do NOT pass pageImageBase64. Prefer putting the Figma get_screenshot https URL into figmaImageBase64 (URL accepted). Optional figmaImageUrl can mirror the same URL. After call, verify hasFigmaImage===true or retry. Optional tabId; omit to use the current active tab. Tell user to view Panel dialog — do NOT dump markdown tables in chat.",
       inputSchema: {
+        tabId: optionalTabId,
         pageUrl: z.string().optional(),
         figmaNodeId: z.string().optional(),
         figmaFileKey: z.string().optional(),
@@ -556,8 +570,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_network_requests",
     {
       description:
-        "Get cached network captures for the pinned MCP target tab: page fetch/XHR plus chrome.webRequest (document/script/image/etc). Requires「设为 MCP 目标页」first.",
+        "Get cached network captures for a tab (tabId or current active tab): page fetch/XHR plus chrome.webRequest.",
       inputSchema: {
+        tabId: optionalTabId,
         urlPattern: z.string().optional().describe("Filter by URL substring"),
         method: z.string().optional().describe("HTTP method, e.g. GET"),
         kind: z
@@ -576,18 +591,19 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_page_context",
     {
       description:
-        "Get the pinned page environment (normal/DevTools/Chii), current logged-in user, language, JSBridge/dark/mock/design-size state, and current flow summary. Requires the extension Panel for Chii/flow data.",
-      inputSchema: {},
+        "Get page environment (normal/DevTools/Chii), current logged-in user, language, JSBridge/dark/mock/design-size state, and current flow summary. Optional tabId; omit to use the current active tab. Requires the extension Panel for Chii/flow data.",
+      inputSchema: { tabId: optionalTabId },
     },
-    async () => toolText(await sendToExtension("get_page_context", {})),
+    async (args) => toolText(await sendToExtension("get_page_context", args)),
   );
 
   mcpServer.registerTool(
     "set_page_settings",
     {
       description:
-        "Set pinned page controls exposed by the extension Panel: language, simulated in-app JSBridge, dark skin, design-size viewport, and Mock master switch. Chii is supported except design-size.",
+        "Set page controls exposed by the extension Panel (tabId or current active tab): language, simulated in-app JSBridge, dark skin, design-size viewport, and Mock master switch. Chii is supported except design-size.",
       inputSchema: {
+        tabId: optionalTabId,
         language: z.enum(["zhCn", "zhTc", "en"]).optional(),
         jsBridge: z.boolean().optional(),
         darkSkin: z.boolean().optional(),
@@ -608,8 +624,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "quick_sms_login",
     {
       description:
-        "Log the pinned page in by phone using the Panel's quick SMS login capability, then apply the returned session storage plan. Non-production environments only; supports Chii when its Panel connection is active.",
+        "Log a tab in by phone using the Panel (tabId or current active tab)'s quick SMS login capability, then apply the returned session storage plan. Non-production environments only; supports Chii when its Panel connection is active.",
       inputSchema: {
+        tabId: optionalTabId,
         phone: z.string().min(1),
         areaCode: z.string().optional().describe('Default "+86"'),
         env: z.enum(["sit", "uat", "dev", "gray"]).optional().describe("Default sit"),
@@ -731,8 +748,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "snapshot",
     {
       description:
-        "Accessibility snapshot of the pinned page with stable refs (e1, e2…). Use refs with click/fill/type/scroll. Requires「设为 MCP 目标页」or an active Chii Panel.",
+        "Accessibility snapshot of a tab (tabId or current active tab) with stable refs (e1, e2…). Use refs with click/fill/type/scroll. Chii Panel is also supported.",
       inputSchema: {
+        tabId: optionalTabId,
         maxNodes: z.number().int().optional().describe("Default 120, max 400"),
       },
     },
@@ -743,9 +761,17 @@ function createMcpServer() {  const mcpServer = new McpServer({
   mcpServer.registerTool(
     "click",
     {
-      description: "Click a snapshot ref on the pinned page. Call snapshot first.",
+      description:
+        "Click on a tab (tabId or current active tab). Prefer snapshot ref; also accepts selector, visible text, or x/y (CDP mouse events).",
       inputSchema: {
-        ref: z.string().describe("Ref from snapshot, e.g. e3"),
+        tabId: optionalTabId,
+        ref: z.string().optional().describe("Ref from snapshot, e.g. e3"),
+        selector: z.string().optional(),
+        text: z.string().optional().describe("Visible accessible name or inner text"),
+        x: z.number().optional(),
+        y: z.number().optional(),
+        button: z.enum(["left", "right", "middle"]).optional(),
+        clickCount: z.number().int().optional(),
       },
     },
     async (args) =>
@@ -755,9 +781,13 @@ function createMcpServer() {  const mcpServer = new McpServer({
   mcpServer.registerTool(
     "fill",
     {
-      description: "Set an input/textarea value by snapshot ref in one shot.",
+      description:
+        "Set an input/textarea value by snapshot ref, selector, or visible text.",
       inputSchema: {
-        ref: z.string(),
+        tabId: optionalTabId,
+        ref: z.string().optional(),
+        selector: z.string().optional(),
+        text: z.string().optional(),
         value: z.string(),
       },
     },
@@ -770,6 +800,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     {
       description: "Type into a snapshot ref character by character. clear defaults to true.",
       inputSchema: {
+        tabId: optionalTabId,
         ref: z.string(),
         text: z.string(),
         delay: z.number().int().optional().describe("Per-key delay ms, default 20"),
@@ -785,6 +816,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
     {
       description: "Dispatch a key (Enter, Tab, Escape, Backspace, ArrowDown…) on a ref or the focused element.",
       inputSchema: {
+        tabId: optionalTabId,
         key: z.string(),
         ref: z.string().optional(),
         ctrlKey: z.boolean().optional(),
@@ -803,6 +835,7 @@ function createMcpServer() {  const mcpServer = new McpServer({
       description:
         "Scroll the page or a snapshot ref. With ref and no x/y, scrolls the element into view. Without ref, scrolls the window (default y=400).",
       inputSchema: {
+        tabId: optionalTabId,
         ref: z.string().optional(),
         x: z.number().optional(),
         y: z.number().optional(),
@@ -817,13 +850,13 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "tabs",
     {
       description:
-        "List/create/close/select Chrome tabs. new/select pin the tab as MCP target by default.",
+        "List/create/close/select Chrome tabs. Optional pin=true keeps the legacy pin; default is off.",
       inputSchema: {
         action: z.enum(["list", "new", "close", "select"]).describe("Tab operation"),
         url: z.string().optional().describe("For new"),
         tabId: z.number().int().optional().describe("For close/select"),
         active: z.boolean().optional().describe("Whether new tab is focused; default true"),
-        pin: z.boolean().optional().describe("Pin as MCP target; default true for new/select"),
+        pin: z.boolean().optional().describe("Legacy optional pin; default false"),
         currentWindow: z.boolean().optional().describe("list current window only; default true"),
       },
     },
@@ -834,8 +867,9 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "wait",
     {
       description:
-        "Wait for a selector, snapshot ref, URL substring, or network idle on the pinned page.",
+        "Wait for a selector, snapshot ref, URL substring, or network idle on a tab (tabId or current active tab).",
       inputSchema: {
+        tabId: optionalTabId,
         kind: z
           .enum(["selector", "ref", "url", "network_idle"])
           .optional()
@@ -859,14 +893,220 @@ function createMcpServer() {  const mcpServer = new McpServer({
     "get_console_logs",
     {
       description:
-        "Read recent console logs from the pinned page (injected hook) or Chii Runtime.consoleAPICalled buffer.",
+        "Read recent console logs from a tab (tabId or current active tab) or Chii Runtime.consoleAPICalled buffer.",
       inputSchema: {
+        tabId: optionalTabId,
         level: z.enum(["log", "info", "warn", "error", "debug"]).optional(),
         limit: z.number().int().optional().describe("Default 80"),
         clear: z.boolean().optional().describe("Clear buffer after read"),
       },
     },
     async (args) => toolText(await sendToExtension("get_console_logs", args)),
+  );
+
+  mcpServer.registerTool(
+    "goto",
+    {
+      description:
+        "Navigate the current tab (or tabId) to a URL without opening a new tab.",
+      inputSchema: {
+        tabId: optionalTabId,
+        url: z.string().describe("Absolute URL"),
+        waitUntil: z.enum(["load", "commit"]).optional().describe("Default load"),
+        timeoutMs: z.number().int().optional().describe("Default 30000"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("goto", args, { timeoutMs: 60000 })),
+  );
+
+  mcpServer.registerTool(
+    "go_back",
+    {
+      description: "History back on a tab (tabId or current active tab).",
+      inputSchema: {
+        tabId: optionalTabId,
+        waitUntil: z.enum(["load", "commit"]).optional(),
+        timeoutMs: z.number().int().optional(),
+      },
+    },
+    async (args) => toolText(await sendToExtension("go_back", args)),
+  );
+
+  mcpServer.registerTool(
+    "go_forward",
+    {
+      description: "History forward on a tab (tabId or current active tab).",
+      inputSchema: {
+        tabId: optionalTabId,
+        waitUntil: z.enum(["load", "commit"]).optional(),
+        timeoutMs: z.number().int().optional(),
+      },
+    },
+    async (args) => toolText(await sendToExtension("go_forward", args)),
+  );
+
+  mcpServer.registerTool(
+    "eval_js",
+    {
+      description:
+        "Evaluate JavaScript in the page MAIN world and return a JSON-serializable value. Prefer an expression, or use return in a statement body.",
+      inputSchema: {
+        tabId: optionalTabId,
+        code: z.string().describe("JS expression or async function body"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("eval_js", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "hover",
+    {
+      description:
+        "Hover via CDP mouseMoved. Target with ref, selector, text, or x/y.",
+      inputSchema: {
+        tabId: optionalTabId,
+        ref: z.string().optional(),
+        selector: z.string().optional(),
+        text: z.string().optional(),
+        x: z.number().optional(),
+        y: z.number().optional(),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("hover", args, { timeoutMs: 20000 })),
+  );
+
+  mcpServer.registerTool(
+    "fill_form",
+    {
+      description:
+        "Fill multiple fields in one call. Each field needs value plus ref, selector, or text.",
+      inputSchema: {
+        tabId: optionalTabId,
+        fields: z
+          .array(
+            z.object({
+              ref: z.string().optional(),
+              selector: z.string().optional(),
+              text: z.string().optional(),
+              value: z.union([z.string(), z.boolean(), z.number()]),
+            }),
+          )
+          .describe("[{ selector, value }]"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("fill_form", args, { timeoutMs: 60000 })),
+  );
+
+  mcpServer.registerTool(
+    "drag",
+    {
+      description:
+        "Drag with CDP mouse events. Provide from/to as x+y or fromRef/toRef / selector / text.",
+      inputSchema: {
+        tabId: optionalTabId,
+        fromX: z.number().optional(),
+        fromY: z.number().optional(),
+        toX: z.number().optional(),
+        toY: z.number().optional(),
+        fromRef: z.string().optional(),
+        toRef: z.string().optional(),
+        fromSelector: z.string().optional(),
+        toSelector: z.string().optional(),
+        fromText: z.string().optional(),
+        toText: z.string().optional(),
+        steps: z.number().int().optional().describe("Default 8"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("drag", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "upload_file",
+    {
+      description:
+        "Set files on an input[type=file] via CDP DOM.setFileInputFiles. files must be absolute local paths Chrome can read.",
+      inputSchema: {
+        tabId: optionalTabId,
+        selector: z.string().optional().describe("CSS selector for the file input"),
+        ref: z.string().optional(),
+        path: z.string().optional().describe("Single absolute path"),
+        files: z.array(z.string()).optional().describe("Absolute paths"),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("upload_file", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "debugger_attach",
+    {
+      description:
+        "Attach chrome.debugger to a tab. First CDP call also auto-attaches.",
+      inputSchema: { tabId: optionalTabId },
+    },
+    async (args) => toolText(await sendToExtension("debugger_attach", args)),
+  );
+
+  mcpServer.registerTool(
+    "debugger_detach",
+    {
+      description:
+        "Detach chrome.debugger from a tab. May also end design-size emulation on that tab.",
+      inputSchema: { tabId: optionalTabId },
+    },
+    async (args) => toolText(await sendToExtension("debugger_detach", args)),
+  );
+
+  mcpServer.registerTool(
+    "cdp_send",
+    {
+      description:
+        "Send a raw Chrome DevTools Protocol command. Auto-attaches debugger. Example method: Runtime.evaluate",
+      inputSchema: {
+        tabId: optionalTabId,
+        method: z.string().describe("CDP method, e.g. Runtime.evaluate"),
+        params: z.record(z.any()).optional(),
+      },
+    },
+    async (args) =>
+      toolText(await sendToExtension("cdp_send", args, { timeoutMs: 30000 })),
+  );
+
+  mcpServer.registerTool(
+    "cdp_events",
+    {
+      description:
+        "Read buffered CDP events for a tab after debugger_attach or cdp_send. Enable the domain first (e.g. Network.enable).",
+      inputSchema: {
+        tabId: optionalTabId,
+        method: z.string().optional().describe("Filter, e.g. Network.responseReceived"),
+        sinceSeq: z.number().int().optional(),
+        limit: z.number().int().optional().describe("Default 100"),
+        clear: z.boolean().optional(),
+      },
+    },
+    async (args) => toolText(await sendToExtension("cdp_events", args)),
+  );
+
+  mcpServer.registerTool(
+    "handle_dialog",
+    {
+      description:
+        "Accept/dismiss a JS alert/confirm/prompt on the tab. Call debugger_attach first or let this auto-attach. Omit accept to peek pending dialog.",
+      inputSchema: {
+        tabId: optionalTabId,
+        accept: z.boolean().optional().describe("Default true if handling"),
+        action: z.enum(["accept", "dismiss"]).optional(),
+        promptText: z.string().optional(),
+        peek: z.boolean().optional(),
+      },
+    },
+    async (args) => toolText(await sendToExtension("handle_dialog", args)),
   );
 
   return mcpServer;

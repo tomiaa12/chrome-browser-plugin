@@ -1,8 +1,8 @@
 ---
 name: figma-page-compare
 description: >-
-  用 chrome-browser-plugin 的 show_design_diffs，把 Figma 整页 Frame 与已钉住的
-  Chrome 目标页做还原度/设计走查比对。仅当用户明确要求「比对设计稿与当前页面」「设计走查」
+  用 chrome-browser-plugin 的 show_design_diffs，把 Figma 整页 Frame 与当前
+  Chrome 页面做还原度/设计走查比对。仅当用户明确要求「比对设计稿与当前页面」「设计走查」
   「还原度检查」「设计差异」或调用 show_design_diffs 时使用。不要在「按 Figma 写/实现页面」
   「只看这个 Figma 链接」「设计稿落地/转代码」时启用。
 ---
@@ -13,7 +13,7 @@ description: >-
 
 依赖：
 
-1. 本插件提供的 MCP（`chrome-browser-plugin` / `ping`、`get_target_tab`、`get_dom_snapshot` 等）
+1. 本插件提供的 MCP（`chrome-browser-plugin` / `ping`、`get_active_tab`、`get_dom_snapshot` 等）
 2. Figma MCP（`get_metadata` / `get_screenshot`；细节不够时再按需 `get_design_context`）
 3. 用户已安装并连接配套 Chrome 扩展（`ws://127.0.0.1:9527`）
 
@@ -28,7 +28,7 @@ description: >-
 
 > 请先发送要比对的 Figma 节点链接（需带 `node-id`）。  
 > 示例：`https://www.figma.com/design/<fileKey>/xxx?node-id=4356-7884`  
-> 并在插件顶部点「设为 MCP 目标页」后，再说一次「比对」。
+> 打开对应业务页 → 扩展 Panel 连接菜单「MCP 操作页」点「复制 tabId」→ 把 tabId 和链接一起发来后再说「比对」。
 
 ### 1. 解析 URL + 是否为「整页」节点
 
@@ -53,22 +53,24 @@ description: >-
 | MCP | 用途 | 探活 |
 |-----|------|------|
 | `plugin-figma-figma`（或 Figma） | 设计稿 | `get_metadata` |
-| `chrome-browser-plugin`（本插件 MCP，操控浏览器） | 页面 | `ping` 或 `get_target_tab` |
+| `chrome-browser-plugin`（本插件 MCP，操控浏览器） | 页面 | `ping` 或 `get_active_tab` |
 
 - Figma 不可用：提示检查 Cursor / VS Code MCP 里 Figma 已连接/授权。
 - Chrome 扩展不可用 / `Chrome extension is not connected`：提示先启动本 MCP，再在 Chrome 刷新扩展，确认连上 `ws://127.0.0.1:9527`。
 - 任一失败：**停止**，不要用臆测页面继续比。
 - 调用 `show_design_diffs` 前用 `GetMcpTools` 看当次 schema 接受哪些字段，**以当次 schema 为准**，不要死记旧描述。
 
-### 3. Target Tab 是否已设置
+### 3. 是否带了 Panel 复制的 tabId
 
-调用 `get_target_tab`：
+用户消息里必须有从扩展 Panel「MCP 操作页 → 复制 tabId」复制的数字 `tabId`。
 
-- `pinned !== true` 或没有 `target.tabId`：停止，提示：
+- 识别：独立整数，或 `tabId=` / `tabId:` / `#` 后跟数字。不要把 Figma `node-id`（含连字符，如 `4356-7884`）当成 tabId。
+- **没有 tabId**：停止，提示：
 
-> 还没有钉住 MCP 目标页。请打开要比对的业务页 → 扩展 Panel 顶部点「设为 MCP 目标页」→ 再让我比对。
+> 请先打开要比对的业务页 → 扩展 Panel 连接菜单「MCP 操作页」点「复制 tabId」→ 把 tabId 和 Figma 链接一起发我。
 
-- 已钉住：简短确认 `title` / `url` / `tabId` 后再往下。
+- **有 tabId**：后续 `screenshot_design_width` / `get_dom_snapshot` / `show_design_diffs` **必须传入该 tabId**。禁止省略、禁止回退当前激活页。标签不存在则停止。
+- 简短确认 `title` / `url` / `tabId` 后再往下。
 
 ### 4. Figma 与 Target 是否为同一屏
 
@@ -92,14 +94,14 @@ description: >-
 > Figma 页面和 Target 的页面对不上。  
 > 设计稿：`{figmaFrameName}`（`{nodeId}`）  
 > 当前 Target：`{pageTitle或主文案锚点}`（`{url}`）  
-> 请先打开与设计稿同一业务屏 → 扩展 Panel 顶部再点一次「设为 MCP 目标页」→ 再说「比对」。
+> 请先打开与设计稿同一业务屏 → 再复制一次 tabId 后说「比对」。
 
 ## 比对链路（闸门 0–3 通过后；同一屏在取完信号后校验）
 
-闸门 3 已确认目标页，**不必再调一次** `get_target_tab`。
+闸门 3 已确认 tabId，后续页面工具都带这个 `tabId`，**不必再调** `get_active_tab`。
 
-1. `screenshot_design_width` — 保证 `offsetWidth === 375`；**页面完整截图缓存在扩展内**（返回里的 `pngBase64` 可能截断，仅供预览，**禁止再回传**）
-2. `get_dom_snapshot` — **放在**截图之后；取 gapBelow/gapRight、宽高、padding/margin、圆角、边框、color、fontSize、lineHeight、fontWeight、opacity、disabled
+1. `screenshot_design_width` — 必须带闸门 3 的 `tabId`；保证 `offsetWidth === 375`；**页面完整截图缓存在扩展内**（返回里的 `pngBase64` 可能截断，仅供预览，**禁止再回传**）
+2. `get_dom_snapshot` — **放在**截图之后，必须带同一 `tabId`；取 gapBelow/gapRight、宽高、padding/margin、圆角、边框、color、fontSize、lineHeight、fontWeight、opacity、disabled
 3. Figma：`get_screenshot`（整页 Frame）拿到设计稿图 + `get_metadata`（闸门 1 可复用）；颜色/字号不够时再按需 `get_design_context`（**不要**为此读 design-to-code skill）  
    步骤 1–3 可与 Figma 侧并行
 4. **同一屏校验**（闸门 4）：用上表信号判断；对不上则停止并提示，不进入细项比对、不调 `show_design_diffs`

@@ -29,5 +29,5 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 ## 使用前
 
 1. Node ≥ 18；MCP 通过 `npx -y chrome-browser-plugin` 从 npm 拉取执行
-2. Chrome 加载配套扩展，Panel 点「设为 MCP 目标页」
+2. Chrome 加载配套扩展；页面工具默认操作当前激活页，需要指定页时在 Panel 点「复制 tabId」
 3. 另配 Figma MCP
