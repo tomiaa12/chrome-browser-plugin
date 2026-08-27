@@ -1,6 +1,6 @@
 {
   "name": "chrome-browser-plugin",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "description": "MCP stdio server bridging Cursor/Copilot to Chrome extension via WebSocket",
   "main": "dist/server.cjs",
