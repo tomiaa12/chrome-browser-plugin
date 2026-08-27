@@ -1,0 +1,95 @@
+name: Publish MCP
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - mcp/package.json
+  workflow_dispatch:
+
+concurrency:
+  group: publish-mcp
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Detect package.json version change
+        id: ver
+        run: |
+          set -euo pipefail
+          NEW=$(node -p "require('./mcp/package.json').version")
+          echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          echo "current version: $NEW"
+
+          CHANGED=true
+          if [ "${GITHUB_EVENT_NAME}" = "push" ]; then
+            BEFORE="${{ github.event.before }}"
+            ZERO="0000000000000000000000000000000000000000"
+            OLD=""
+            if [ -n "$BEFORE" ] && [ "$BEFORE" != "$ZERO" ]; then
+              if git cat-file -e "${BEFORE}:mcp/package.json" 2>/dev/null; then
+                OLD=$(git show "${BEFORE}:mcp/package.json" | node -e "let s='';process.stdin.on('data',d=>s+=d);process.stdin.on('end',()=>console.log(JSON.parse(s).version))")
+              fi
+            fi
+            echo "previous version: ${OLD:-<none>}"
+            echo "old=${OLD}" >> "$GITHUB_OUTPUT"
+            if [ -n "$OLD" ] && [ "$OLD" = "$NEW" ]; then
+              CHANGED=false
+            fi
+          fi
+          echo "changed=$CHANGED" >> "$GITHUB_OUTPUT"
+          if [ "$CHANGED" != "true" ]; then
+            echo "mcp/package.json version 未变化，跳过发布"
+          fi
+
+      - name: Setup pnpm
+        if: steps.ver.outputs.changed == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        if: steps.ver.outputs.changed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+          cache-dependency-path: mcp/pnpm-lock.yaml
+
+      - name: Install
+        if: steps.ver.outputs.changed == 'true'
+        working-directory: mcp
+        run: pnpm install --frozen-lockfile
+
+      - name: Check whether version is already on npm
+        id: npm
+        if: steps.ver.outputs.changed == 'true'
+        working-directory: mcp
+        run: |
+          set -euo pipefail
+          VER="${{ steps.ver.outputs.new }}"
+          if npm view "chrome-browser-plugin@${VER}" version >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "chrome-browser-plugin@${VER} 已在 npm，跳过发布"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "chrome-browser-plugin@${VER} 尚未发布"
+          fi
+
+      - name: Publish to npm
+        if: steps.ver.outputs.changed == 'true' && steps.npm.outputs.exists != 'true'
+        working-directory: mcp
+        run: pnpm publish --no-git-checks --access public --provenance
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
