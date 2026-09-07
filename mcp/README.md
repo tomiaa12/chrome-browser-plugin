@@ -50,7 +50,8 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | 工具 | 说明 | 需指定 tab |
 |------|------|----------------|
 | `ping` | 探活 | 否 |
-| `open_url` | 打开 URL | 否 |
+| `get_version` | 返回 MCP 服务名称与版本号（不依赖扩展） | 否 |
+| `open_url` | 后台打开 URL（默认不抢焦点；后续必须带返回的 tabId） | 返回 `tabId` |
 | `get_active_tab` | 当前激活 tab | 否 |
 | `get_target_tab` | 兼容旧钉住接口（可选） | 否 |
 | `set_target_tab` | 兼容旧钉住接口（可选） | 否 |
@@ -87,7 +88,7 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 
 页面类工具默认操作当前激活 tab；传入 `tabId` 则操作指定页。可在扩展 Panel 点「复制 tabId」。
 
-页面操作可用 `snapshot` 的 `ref`，也可用 `selector` / 可见文案 / `x`+`y`。`goto` 改当前 tab 地址；`open_url` 仍是新开页。`cdp_send` 会自动 attach debugger；`debugger_detach` 可能同时结束该 tab 的设计稿尺寸模拟。`upload_file` 需要 Chrome 能读到的本机绝对路径。
+页面操作可用 `snapshot` 的 `ref`，也可用 `selector` / 可见文案 / `x`+`y`。`goto` 改当前 tab 地址；`open_url` 默认后台新开页（`active=false`，不抢焦点），后续页面工具必须传入返回的 `tabId`。`cdp_send` 会自动 attach debugger；`debugger_detach` 可能同时结束该 tab 的设计稿尺寸模拟。`upload_file` 需要 Chrome 能读到的本机绝对路径。
 
 `list_panel_requests` 每条请求带 `tags`：`jsBridge` / `mock` / `mockName` / `mockScenario` / `chii` / `whistle` / `source`，可用 `jsBridge`、`mock` 布尔参数筛选。`get_network_requests` 同时包含页面 fetch/XHR 与 `chrome.webRequest`（脚本/图片/文档等）。
 

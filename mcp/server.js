@@ -3,7 +3,10 @@
 // stdout 留给 MCP 协议，日志走 stderr（Cursor 会显示为 [error]，属正常）
 
 import { execFileSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { WebSocketServer, WebSocket } from "ws";
@@ -42,6 +45,24 @@ async function resolveLocalFileFields(args, keys) {
 const WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 const WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
 const REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 30000);
+const MCP_NAME = "chrome-browser-plugin";
+const MCP_VERSION = readMcpVersion();
+
+function readMcpVersion() {
+  const here = dirname(fileURLToPath(import.meta.url));
+  for (const candidate of [
+    join(here, "package.json"),
+    join(here, "..", "package.json"),
+  ]) {
+    try {
+      const version = JSON.parse(readFileSync(candidate, "utf8")).version;
+      if (typeof version === "string" && version) return version;
+    } catch (_) {
+      /* try next */
+    }
+  }
+  return "0.0.0";
+}
 
 /** @type {WebSocket | null} */
 let extensionSocket = null;
@@ -335,9 +356,10 @@ function toolText(data) {
 }
 
 /** 注册 ping / open_url / get_active_tab，均经 sendToExtension 下发 */
-function createMcpServer() {  const mcpServer = new McpServer({
-    name: "chrome-browser-plugin",
-    version: "1.0.0",
+function createMcpServer() {
+  const mcpServer = new McpServer({
+    name: MCP_NAME,
+    version: MCP_VERSION,
   });
 
   const optionalTabId = z
@@ -361,15 +383,47 @@ function createMcpServer() {  const mcpServer = new McpServer({
   );
 
   mcpServer.registerTool(
+    "get_version",
+    {
+      description:
+        "Return this MCP server's name and version. Does not require the Chrome extension.",
+      inputSchema: {},
+    },
+    async () =>
+      toolText({
+        name: MCP_NAME,
+        version: MCP_VERSION,
+      }),
+  );
+
+  mcpServer.registerTool(
     "open_url",
     {
-      description: "Open a URL in a new browser tab via the Chrome extension.",
+      description:
+        "Open a URL in a new Chrome tab. Defaults to a background tab (active=false): does not steal the user's current page, but the tab still appears in the tab strip. Subsequent page tools MUST pass the returned tabId, otherwise they hit the user's active tab. Close with tabs action=close when done. Pass active=true only to focus the new tab.",
       inputSchema: {
         url: z.string().url().describe("URL to open, e.g. https://google.com"),
+        active: z
+          .boolean()
+          .optional()
+          .describe("If true, focus the new tab. Default false (background)."),
+        timeoutMs: z
+          .number()
+          .int()
+          .optional()
+          .describe("Wait for load complete; default 30000. Ignored when waitUntil=commit."),
+        waitUntil: z
+          .enum(["complete", "commit"])
+          .optional()
+          .describe("complete (default) waits until loaded; commit returns right after create."),
       },
     },
-    async ({ url }) => {
-      const data = await sendToExtension("open_url", { url });
+    async ({ url, active, timeoutMs, waitUntil }) => {
+      const data = await sendToExtension(
+        "open_url",
+        { url, active, timeoutMs, waitUntil },
+        { timeoutMs: (timeoutMs || 30000) + 5000 },
+      );
       return toolText(data);
     },
   );
@@ -1119,7 +1173,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 
-  log("MCP stdio server started");
+  log(`MCP stdio server started (${MCP_NAME} ${MCP_VERSION})`);
 
   // Cursor 关/重启 MCP：stdio 断开或发信号时立刻释放 9527
   process.on("SIGINT", () => shutdown("SIGINT"));

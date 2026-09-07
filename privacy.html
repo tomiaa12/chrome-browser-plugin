@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>隐私权政策 · 解密抓包远程调试助手</title>
+  <title>Privacy Policy / 隐私权政策 · 解密抓包远程调试助手</title>
   <style>
     :root {
       --bg: #f7f6f3;
@@ -25,7 +25,7 @@
       line-height: 1.7;
     }
     main {
-      max-width: 720px;
+      max-width: 760px;
       margin: 0 auto;
       padding: 48px 24px 80px;
     }
@@ -38,12 +38,16 @@
     .meta {
       color: var(--muted);
       font-size: 0.9rem;
-      margin-bottom: 32px;
+      margin-bottom: 24px;
     }
     h2 {
-      font-size: 1.1rem;
-      margin: 28px 0 10px;
+      font-size: 1.12rem;
+      margin: 32px 0 10px;
       color: var(--accent);
+    }
+    h3 {
+      font-size: 0.98rem;
+      margin: 18px 0 8px;
     }
     p, li { font-size: 0.95rem; }
     ul { padding-left: 1.25rem; }
@@ -54,8 +58,11 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 20px 22px;
-      margin-top: 20px;
+      margin-top: 16px;
     }
+    .en { color: var(--ink); }
+    .zh { color: var(--muted); }
+    .zh + .en, .en + .zh { margin-top: 8px; }
     footer {
       margin-top: 40px;
       padding-top: 20px;
@@ -63,107 +70,309 @@
       color: var(--muted);
       font-size: 0.85rem;
     }
+    code {
+      font-size: 0.88em;
+      background: #efece4;
+      padding: 0 4px;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <main>
-    <h1>隐私权政策</h1>
+    <h1>Privacy Policy / 隐私权政策</h1>
     <p class="meta">
-      产品名称：解密抓包远程调试助手<br />
-      生效日期：2026 年 7 月 20 日<br />
-      最后更新：2026 年 7 月 20 日
+      Product / 产品名称：解密抓包远程调试助手（Network Decrypt）<br />
+      Chrome Web Store item ID：cbbgjkhcjdbmacjkpjgphmpkkemmpnpf<br />
+      Publisher / 发布者：Network Monitor Pro Team<br />
+      Effective date / 生效日期：July 20, 2026<br />
+      Last updated / 最后更新：September 7, 2026
     </p>
 
     <div class="box">
-      <p>
-        本隐私权政策说明 Chrome 扩展「解密抓包远程调试助手」（以下简称「本扩展」）如何处理与您使用相关的信息。
-        使用本扩展即表示您已阅读并理解本政策。
+      <p class="en">
+        This Privacy Policy explains how the Chrome extension “解密抓包远程调试助手”
+        (the “Extension”) <strong>collects, processes, stores, and shares</strong> user data.
+        The Extension is a local developer debugging tool. It handles personal or sensitive
+        user data that may appear in network traffic and page context (web browsing activity,
+        website content, authentication cookies/tokens, and information inside request and
+        response bodies). Data is processed on your device by default. Optional features that
+        send data off-device run only after you turn them on.
+      </p>
+      <p class="zh">
+        本隐私权政策说明 Chrome 扩展「解密抓包远程调试助手」（以下简称「本扩展」）如何
+        <strong>收集、处理、存储和共享</strong>用户数据。本扩展是本地开发调试工具，会处理网络请求与页面上下文中可能出现的个人或敏感用户数据（网页浏览活动、网站内容、身份验证 Cookie/Token，以及请求/响应体中的信息）。默认在您的设备本地处理；只有您主动开启的可选功能才会把数据发到设备外。
+      </p>
+      <p class="en">
+        Before the Extension processes the data described below, it shows an in-product
+        disclosure and asks you to take an affirmative action (check the box and click Agree).
+        Installing the Extension or using it does not by itself constitute consent.
+      </p>
+      <p class="zh">
+        在处理下述数据之前，本扩展会在产品界面内醒目披露，并要求您采取明确动作（勾选并点击「同意」）。仅安装或打开扩展本身不构成同意。
       </p>
     </div>
 
-    <h2>1. 我们是谁</h2>
-    <p>
-      本扩展由开发者维护，用于本地网络请求监控、接口解密查看、远程调试辅助等开发调试场景。
+    <h2>1. Who we are / 我们是谁</h2>
+    <p class="en">
+      The Extension is maintained by Network Monitor Pro Team for developers. Its single
+      purpose is local network-request monitoring, API decrypt/inspect, mock, remote debugging
+      assistance, and related developer tools.
+    </p>
+    <p class="zh">
+      本扩展由 Network Monitor Pro Team 维护，面向开发者。单一用途是：本地网络请求监控、接口解密查看、Mock、远程调试辅助及相关开发工具。
     </p>
 
-    <h2>2. 我们收集哪些信息</h2>
-    <p>本扩展可能在您主动使用相关功能时，于您的浏览器本地处理以下类型的数据：</p>
-    <ul>
-      <li><strong>网络请求信息</strong>：请求 URL、方法、请求头/响应头、请求体/响应体、状态码、耗时等，用于抓包展示、过滤、格式化与解密查看。</li>
-      <li><strong>Cookie 与本地存储相关数据</strong>：在您启用相关调试/账号同步等功能时，可能读取页面 Cookie、localStorage 中与调试相关的键值（例如会话或密钥类字段）。</li>
-      <li><strong>标签页与页面上下文</strong>：当前标签页 URL、标题等，用于将调试能力绑定到目标页面。</li>
-      <li><strong>扩展配置与偏好</strong>：您在扩展中设置的规则、开关、面板状态等，保存在浏览器扩展存储（如 <code>chrome.storage</code>）中。</li>
-      <li><strong>剪贴板</strong>：在您主动复制内容时写入剪贴板（例如复制请求数据）。</li>
-    </ul>
-    <p>本扩展<strong>不会</strong>要求您注册账号，也<strong>不会</strong>主动收集姓名、邮箱、电话等身份信息用于运营分析。</p>
-
-    <h2>3. 信息如何使用</h2>
-    <ul>
-      <li>在本地展示与分析网络请求，辅助接口调试与解密查看；</li>
-      <li>注入或启用以您选择的调试工具（如远程调试、控制台工具）所需的脚本与规则；</li>
-      <li>保存您的扩展配置，以便下次继续使用；</li>
-      <li>在您发起的操作中，与本机或您自行配置的本地调试服务通信（例如本机 Whistle / Chii 等）。</li>
-    </ul>
-
-    <h2>4. 数据存储与传输</h2>
-    <ul>
-      <li><strong>默认本地处理</strong>：抓包、解密查看与配置数据主要在您的设备与浏览器本地处理与存储，开发者不会运营用于收集这些数据的后端服务器。</li>
-      <li><strong>本地调试服务</strong>：当您启用远程调试等相关功能时，数据可能发送到您本机或您指定的本地调试地址（例如 <code>localhost</code> / 本机代理端口）。这些服务由您自行部署与控制。</li>
-      <li><strong>可选第三方脚本</strong>：若您主动开启依赖 CDN 的调试插件选项，浏览器可能从公开 CDN（例如 jsDelivr）加载对应脚本。该行为由您主动启用，且遵循对应 CDN 与开源库的政策。</li>
-      <li><strong>不上传出售</strong>：我们不会将您的网络请求内容、Cookie 或调试数据出售、出租或以广告定向为目的提供给第三方。</li>
-    </ul>
-
-    <h2>5. 权限说明</h2>
-    <p>本扩展申请的权限仅用于实现上述调试功能，包括但不限于：</p>
-    <ul>
-      <li><code>tabs</code> / <code>scripting</code> / <code>sidePanel</code>：定位目标页面并提供面板与脚本能力；</li>
-      <li><code>debugger</code>：捕获与分析网络请求；</li>
-      <li><code>cookies</code>：在调试场景下读取必要 Cookie；</li>
-      <li><code>storage</code>：保存扩展配置；</li>
-      <li><code>clipboardWrite</code>：支持复制调试内容。</li>
-    </ul>
-
-    <h2>6. 数据保留与删除</h2>
-    <ul>
-      <li>会话类调试数据通常随页面关闭、扩展重载或您清空面板而清除；</li>
-      <li>配置类数据保存在浏览器本地，您可通过清除扩展数据、重置扩展或卸载扩展予以删除；</li>
-      <li>开发者不持有可远程删除您本地数据的云端副本（因默认不上传）。</li>
-    </ul>
-
-    <h2>7. 信息共享</h2>
-    <p>
-      除以下情形外，我们不会与第三方共享您的用户数据：
+    <h2>2. Collection / 收集</h2>
+    <p class="en">
+      The Extension collects the following categories of data when you agree and use the
+      corresponding features. Collection happens on your device via Chrome extension APIs
+      (including <code>debugger</code>, <code>webRequest</code>, <code>cookies</code>,
+      <code>tabs</code>, <code>scripting</code>, <code>storage</code>, host permission
+      <code>&lt;all_urls&gt;</code>) and content scripts.
     </p>
-    <ul>
-      <li>您主动启用并连接的本地/自建调试工具或服务；</li>
-      <li>您主动启用并从 CDN 加载的第三方调试脚本；</li>
-      <li>法律法规要求或有权机关依法提出的披露要求。</li>
-    </ul>
-
-    <h2>8. 儿童隐私</h2>
-    <p>本扩展面向开发与调试场景的成年用户，不面向 13 岁以下儿童，也不会故意收集儿童的个人信息。</p>
-
-    <h2>9. 政策更新</h2>
-    <p>
-      我们可能适时更新本隐私权政策。更新后将修改本页面的「最后更新」日期。
-      若变更对您的权利产生重大影响，我们会通过扩展说明或相关仓库尽量提示。
-    </p>
-
-    <h2>10. 联系我们</h2>
-    <p>
-      如对本隐私权政策或数据处理有任何疑问，请通过以下方式联系：
+    <p class="zh">
+      在您同意并使用相应功能后，本扩展会在设备本地通过 Chrome 扩展 API
+      （包括 <code>debugger</code>、<code>webRequest</code>、<code>cookies</code>、
+      <code>tabs</code>、<code>scripting</code>、<code>storage</code>、主机权限
+      <code>&lt;all_urls&gt;</code>）及内容脚本收集下列数据。
     </p>
     <ul>
       <li>
-        GitHub Issues：
-        <a href="https://github.com/tomiaa12/chrome-browser-plugin/issues" target="_blank" rel="noopener noreferrer">
-          tomiaa12/chrome-browser-plugin
-        </a>
+        <strong>Web browsing activity / 网页浏览活动</strong>：
+        request URLs, methods, resource types, status codes, timing; page and tab URLs and titles.
+        请求 URL、方法、资源类型、状态码、耗时；标签页与页面 URL、标题。
+      </li>
+      <li>
+        <strong>Website content and resources / 网站内容与资源</strong>：
+        HTTP request and response headers and bodies, DOM/page context used for debugging,
+        screenshots you trigger, console logs during remote debug, JSBridge/debug helper output.
+        HTTP 请求/响应头与正文、调试所需的页面/DOM 上下文、您触发的截图、远程调试时的控制台日志、JSBridge 等调试输出。
+      </li>
+      <li>
+        <strong>Authentication information / 身份验证信息</strong>：
+        cookies, session keys, tokens, and similar fields (for example <code>session</code>,
+        <code>rndKey</code>, <code>userInfo</code>, <code>uin</code>) when you use capture,
+        account-sync, or related debug features.
+        在抓包、账号同步等调试功能中读取的 Cookie、会话密钥、Token 及同类字段。
+      </li>
+      <li>
+        <strong>Personally identifiable and other sensitive data that may appear in traffic / 流量中可能出现的个人身份及其他敏感信息</strong>：
+        names, usernames, phone numbers, account IDs, form data, or financial fields if they
+        appear in the pages or APIs you debug. The Extension does not ask you to submit identity
+        information for accounts, marketing, or analytics.
+        若您调试的页面或接口中出现姓名、用户名、手机号、账号 ID、表单或财务字段，本扩展会在本地抓包中看到它们。本扩展不会为注册、营销或统计分析而要求您提供身份信息。
+      </li>
+      <li>
+        <strong>Extension settings / 扩展配置</strong>：
+        rules, toggles, panel state, optional API keys or tokens you save (AI, Figma, webhooks),
+        stored in <code>chrome.storage</code> (local and, for some settings, sync).
+        规则、开关、面板状态，以及您保存的可选 API Key / Token（AI、Figma、Webhook 等）。
+      </li>
+      <li>
+        <strong>Clipboard / 剪贴板</strong>：
+        written only when you copy debug content.
+        仅在您主动复制调试内容时写入。
+      </li>
+    </ul>
+    <p class="en">
+      The Extension does <strong>not</strong> collect analytics, advertising identifiers, or
+      usage telemetry. It does not require an account with the publisher.
+    </p>
+    <p class="zh">
+      本扩展<strong>不</strong>收集统计分析、广告标识或使用遥测，也不要求向发布者注册账号。
+    </p>
+
+    <h2>3. Processing / 处理</h2>
+    <p class="en">
+      Collected data is processed only to provide the Extension’s disclosed single purpose:
+    </p>
+    <p class="zh">处理目的仅限于本扩展已披露的单一用途：</p>
+    <ul>
+      <li>Display, filter, format, decrypt, and inspect captured network requests in the panel. / 在面板中展示、过滤、格式化、解密和查看抓包。</li>
+      <li>Bind debugging tools to the target tab or remote device you select. / 将调试能力绑定到您选择的标签页或远程设备。</li>
+      <li>Account-sync and login helpers for environments you choose to debug. / 在您选择调试的环境中做账号同步与登录辅助。</li>
+      <li>Mock, screenshots, design-diff, flow charts, and in-page debug helpers. / Mock、截图、设计稿比对、流程图与页内调试辅助。</li>
+      <li>Optional remote debug (local Chii/Whistle or the online Chii you enable). / 可选远程调试（本机 Chii/Whistle，或您开启的线上 Chii）。</li>
+      <li>Optional AI, Figma, GitLab, Feishu, CMDB, and MCP tools you configure and invoke. / 您自行配置并触发的 AI、Figma、GitLab、飞书、CMDB 与 MCP 工具。</li>
+      <li>Remember your settings. / 保存您的配置。</li>
+    </ul>
+    <p class="en">
+      We do not process user data for advertising, credit-worthiness, lending, or resale.
+      Processing is performed locally in the browser except when you enable an optional
+      off-device feature listed under Sharing.
+    </p>
+    <p class="zh">
+      我们不会将用户数据用于广告、信用评估、借贷或转售。除您主动开启「共享」一节所列的可选功能外，处理均在浏览器本地完成。
+    </p>
+
+    <h2>4. Storage / 存储</h2>
+    <p class="en">
+      Default storage is on your device only. The publisher does not operate a backend that
+      stores your captured traffic.
+    </p>
+    <p class="zh">
+      默认仅存储在您的设备上。发布者不以自有后端保存您的抓包内容。
+    </p>
+    <ul>
+      <li>
+        <strong>Session debug data / 会话调试数据</strong>：
+        kept in memory or the open panel; typically cleared when you clear the list, close the
+        page, reload the extension, or uninstall.
+        保存在内存或打开的面板中；清空列表、关闭页面、重载或卸载扩展后通常清除。
+      </li>
+      <li>
+        <strong>Settings and keys you save / 您保存的配置与密钥</strong>：
+        <code>chrome.storage.local</code> and, for some AI/settings, <code>chrome.storage.sync</code>
+        (synced with your Chrome profile). You can delete them by clearing extension data,
+        resetting, or uninstalling.
+        部分配置会随 Chrome 账号同步。可通过清除扩展数据、重置或卸载删除。
+      </li>
+      <li>
+        <strong>Account-sync cache / 账号同步缓存</strong>：
+        stored locally for the debug environments you use, until you clear it.
+        保存在本地，直到您手动清除。
+      </li>
+      <li>
+        <strong>Local debug services / 本机调试服务</strong>：
+        if you run Whistle, Chii, or the MCP bridge on localhost, those processes store data
+        under your control (for example <code>127.0.0.1:8899</code>, <code>127.0.0.1:18080</code>,
+        <code>ws://127.0.0.1:9527</code>).
+        若您在本机运行 Whistle、Chii 或 MCP 桥接，数据由您控制的进程保存。
+      </li>
+    </ul>
+    <p class="en">
+      The publisher does not hold a cloud copy of your capture data and cannot remotely delete
+      data that exists only on your device. If you sent data to a service you enabled (online
+      Chii, AI API, Figma, Feishu, etc.), retention follows that service’s policy.
+    </p>
+    <p class="zh">
+      发布者不持有您抓包数据的云端副本，也无法远程删除仅存在于您设备上的数据。若您把数据发到自己开启的服务（线上 Chii、AI、Figma、飞书等），保留期限以该服务的政策为准。
+    </p>
+
+    <h2>5. Sharing / 共享</h2>
+    <p class="en">
+      We do not sell, rent, or share user data for advertising. We do not transfer captured
+      traffic to the publisher’s servers. Data leaves your device only in the following cases,
+      which you initiate:
+    </p>
+    <p class="zh">
+      我们不会出售、出租用户数据，也不会用于广告。不会把抓包内容上传到发布者服务器。数据仅在下列由您主动发起的情形下离开本机：
+    </p>
+    <ul>
+      <li>
+        <strong>Online remote debug / 线上远程调试</strong>：
+        if you enable online Chii, page content, network logs, and console data may be sent to
+        <code>https://web.mfosunhani.com/engine/chii</code> (operator of that host). Local Chii
+        uses <code>http://127.0.0.1:18080</code> and stays on your machine.
+        若您开启线上 Chii，页面内容、网络与控制台数据可能发往该主机运营方；本地 Chii 仅走本机。
+      </li>
+      <li>
+        <strong>User-configured AI APIs / 您配置的 AI 接口</strong>：
+        prompts and context you submit are sent to the API URL you save (default example:
+        <code>https://aigw.finloopai.ai/v1/chat/completions</code>, or another endpoint you enter).
+        您提交的提示词与上下文会发往您保存的 API 地址。
+      </li>
+      <li>
+        <strong>Figma</strong>：
+        if you save a Figma token, the Extension calls Figma APIs you request.
+        若您保存 Figma Token，将按您的操作调用 Figma API。
+      </li>
+      <li>
+        <strong>Feishu / GitLab / CMDB / other tools you open</strong>：
+        requests go to the URLs you configure or the sites you already have open in the browser.
+        请求发往您配置的地址，或您已在浏览器中打开的站点。
+      </li>
+      <li>
+        <strong>Local MCP client / 本机 MCP 客户端</strong>：
+        if you run the local MCP bridge, debug data may be read by the AI client on your machine
+        over <code>ws://127.0.0.1:9527</code>. That client is under your control.
+        本机 MCP 桥接会把调试数据提供给您本机的 AI 客户端，由您控制。
+      </li>
+      <li>
+        <strong>Legal / 法律要求</strong>：
+        if required by law or a valid legal process.
+        法律法规或有权机关依法要求时。
+      </li>
+    </ul>
+    <p class="en">
+      Parties that may receive data: (1) you; (2) services you explicitly enable or configure
+      (online Chii host, your AI provider, Figma, Feishu, GitLab, CMDB, localhost debug tools,
+      your local MCP/AI client); (3) authorities when legally required. The publisher is not
+      one of those recipients for captured traffic.
+    </p>
+    <p class="zh">
+      可能接收数据的主体：(1) 您本人；(2) 您明确开启或配置的服务（线上 Chii 主机、您的 AI 服务商、Figma、飞书、GitLab、CMDB、本机调试工具、本机 MCP/AI 客户端）；(3) 依法有权的机关。发布者不是抓包内容的接收方。
+    </p>
+
+    <h2>6. Permissions / 权限说明</h2>
+    <p class="en">Permissions are used only for the purposes above:</p>
+    <p class="zh">权限仅用于上述用途：</p>
+    <ul>
+      <li><code>tabs</code> / <code>scripting</code> / <code>sidePanel</code>：target the page and show the panel. / 定位目标页并提供面板。</li>
+      <li><code>debugger</code>：capture and analyze network requests; mobile viewport emulation. / 捕获与分析网络请求；移动端视口模拟。</li>
+      <li><code>webRequest</code>：show pending requests in the list. / 在列表中展示进行中的请求。</li>
+      <li><code>cookies</code>：read cookies needed for debug/account-sync/CMDB helpers. / 读取调试、账号同步、CMDB 辅助所需 Cookie。</li>
+      <li><code>storage</code>：save settings and consent. / 保存配置与同意状态。</li>
+      <li><code>clipboardWrite</code>：copy debug content you request. / 按您的操作复制调试内容。</li>
+      <li><code>host_permissions: &lt;all_urls&gt;</code>：run debug helpers on the sites you inspect. / 在您检查的站点上运行调试辅助。</li>
+    </ul>
+
+    <h2>7. Consent, opt-out, and local-only mode / 同意、停用与仅本地模式</h2>
+    <p class="en">
+      Core capture, decrypt, and inspect features run locally after you agree in the in-product
+      dialog. That local-only mode is the default. You can refuse consent and not use the
+      Extension. You can later clear data or uninstall. Optional off-device features (online
+      remote debug, AI, Figma, webhooks) stay off until you enable them. There is no analytics
+      collection to opt out of.
+    </p>
+    <p class="zh">
+      核心抓包、解密、查看功能在您于产品内同意后仅在本地运行，这就是默认的仅本地模式。您可以拒绝同意并停止使用。之后可清除数据或卸载。线上远程调试、AI、Figma、Webhook 等可选功能默认关闭，直至您开启。本扩展不收集统计分析。
+    </p>
+
+    <h2>8. Limited Use / 有限用途</h2>
+    <p class="en">
+      The use of information received from Google APIs will adhere to the Chrome Web Store User
+      Data Policy, including the Limited Use requirements.
+    </p>
+    <p class="zh">
+      从 Google API 收到的信息将遵守 Chrome 网上应用店用户数据政策，包括有限用途（Limited Use）要求。数据只用于本政策披露的单一调试用途，不用于广告或转售。
+    </p>
+
+    <h2>9. Children’s privacy / 儿童隐私</h2>
+    <p class="en">
+      The Extension is for adult developers. It is not directed at children under 13 and does
+      not knowingly collect their personal information.
+    </p>
+    <p class="zh">本扩展面向成年开发者，不面向 13 岁以下儿童，也不会故意收集儿童个人信息。</p>
+
+    <h2>10. Policy updates / 政策更新</h2>
+    <p class="en">
+      We may update this policy. The “Last updated” date will change. Material changes will be
+      described in the Extension UI or store listing when practicable. Continued use after an
+      in-product re-consent (if shown) means you agree to the updated policy.
+    </p>
+    <p class="zh">
+      我们可能更新本政策，并修改「最后更新」日期。重大变更会尽量在扩展界面或商店详情中提示。若再次出现产品内同意，同意后即表示接受更新后的政策。
+    </p>
+
+    <h2>11. Contact / 联系我们</h2>
+    <p class="en">
+      For questions about this policy or your data, contact the publisher by email:
+    </p>
+    <p class="zh">对本政策或数据处理有疑问，请通过邮箱联系：</p>
+    <ul>
+      <li>
+        Email：
+        <a href="mailto:k1178852449@gmail.com">k1178852449@gmail.com</a>
       </li>
     </ul>
 
     <footer>
-      本页面用于满足 Chrome 网上应用店对隐私权政策公开可访问链接的要求。
+      This page is the public Privacy Policy for Chrome Web Store item
+      cbbgjkhcjdbmacjkpjgphmpkkemmpnpf. It covers collection, processing, storage, and sharing.
+      <br />
+      本页面是 Chrome 网上应用店商品 cbbgjkhcjdbmacjkpjgphmpkkemmpnpf 的公开隐私权政策，涵盖收集、处理、存储与共享。
     </footer>
   </main>
 </body>
