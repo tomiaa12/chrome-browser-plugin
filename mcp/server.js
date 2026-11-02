@@ -49,16 +49,28 @@ const MCP_NAME = "chrome-browser-plugin";
 const MCP_VERSION = readMcpVersion();
 
 function readMcpVersion() {
-  const here = dirname(fileURLToPath(import.meta.url));
-  for (const candidate of [
-    join(here, "package.json"),
-    join(here, "..", "package.json"),
-  ]) {
-    try {
-      const version = JSON.parse(readFileSync(candidate, "utf8")).version;
-      if (typeof version === "string" && version) return version;
-    } catch (_) {
-      /* try next */
+  // esbuild 打成 CJS 后 import.meta.url 是空对象，不能拿去 fileURLToPath。
+  // 源码 ESM 用 import.meta.url；打包入口用 argv[1]（dist/server.cjs → 上一级 package.json）。
+  const dirs = [];
+  const metaUrl = import.meta.url;
+  if (typeof metaUrl === "string" && metaUrl) {
+    dirs.push(dirname(fileURLToPath(metaUrl)));
+  }
+  if (typeof process.argv[1] === "string" && process.argv[1]) {
+    dirs.push(dirname(process.argv[1]));
+  }
+
+  const seen = new Set();
+  for (const here of dirs) {
+    for (const candidate of [join(here, "package.json"), join(here, "..", "package.json")]) {
+      if (seen.has(candidate)) continue;
+      seen.add(candidate);
+      try {
+        const version = JSON.parse(readFileSync(candidate, "utf8")).version;
+        if (typeof version === "string" && version) return version;
+      } catch (_) {
+        /* try next */
+      }
     }
   }
   return "0.0.0";
@@ -397,6 +409,29 @@ function createMcpServer() {
   );
 
   mcpServer.registerTool(
+    "list_skills",
+    {
+      description:
+        "List agent skills maintained by the connected Chrome extension. Call this before any specialized chrome-browser-plugin workflow (Figma compare, design review, etc.). Returns id / name / description only.",
+      inputSchema: {},
+    },
+    async () => toolText(await sendToExtension("list_skills", {})),
+  );
+
+  mcpServer.registerTool(
+    "get_skill",
+    {
+      description:
+        "Fetch the latest skill markdown from the connected Chrome extension. Pass id or name from list_skills. Follow the returned content instead of any cached/local skill copy.",
+      inputSchema: {
+        id: z.string().optional().describe("Skill id from list_skills, e.g. figma-page-compare"),
+        name: z.string().optional().describe("Same as id; either id or name is required"),
+      },
+    },
+    async (args) => toolText(await sendToExtension("get_skill", args)),
+  );
+
+  mcpServer.registerTool(
     "open_url",
     {
       description:
@@ -537,11 +572,19 @@ function createMcpServer() {
     "screenshot_design_width",
     {
       description:
-        "Capture full-page PNG of a tab (tabId or current active tab) at design width (default 375). If documentElement.offsetWidth !== 375, enables mobile design-size emulation first. Use for Figma vs page visual compare.",
+        "Capture full-page PNG of a tab at the Figma frame width. Pass width from Figma metadata (375 or 390). Do not omit width and do not use the Panel 设计稿尺寸 checkbox (that checkbox is fixed at 375×812). If offsetWidth does not match width, enables mobile emulation at that width first.",
       inputSchema: {
         tabId: optionalTabId,
-        width: z.number().int().optional().describe("Design width, default 375"),
-        height: z.number().int().optional().describe("Design height, default 812"),
+        width: z
+          .number()
+          .int()
+          .optional()
+          .describe("Figma root frame width, rounded. 375 or 390. Required for compare."),
+        height: z
+          .number()
+          .int()
+          .optional()
+          .describe("Viewport height, default 812. Do not pass the full artboard height."),
         maxBase64Length: z.number().int().optional().describe("Default 120000"),
         timeoutMs: z.number().int().optional().describe("Default 90000"),
       },

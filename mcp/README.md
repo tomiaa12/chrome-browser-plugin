@@ -51,6 +51,8 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 |------|------|----------------|
 | `ping` | 探活 | 否 |
 | `get_version` | 返回 MCP 服务名称与版本号（不依赖扩展） | 否 |
+| `list_skills` | 列出配套 Chrome 扩展内维护的 Agent Skill 目录 | 否；需扩展已连接 |
+| `get_skill` | 按 id/name 拉取完整 Skill markdown | 否；需扩展已连接 |
 | `open_url` | 后台打开 URL（默认不抢焦点；后续必须带返回的 tabId） | 返回 `tabId` |
 | `get_active_tab` | 当前激活 tab | 否 |
 | `get_target_tab` | 兼容旧钉住接口（可选） | 否 |
@@ -58,7 +60,7 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | `show_design_diffs` | 推送截图+差异并打开 Panel 内 sl-dialog | 可选 `tabId` |
 | `run_automation` | 在目标页执行 Automation | 可选 `tabId` |
 | `screenshot_tab` | 整页截图 | 可选 `tabId` |
-| `screenshot_design_width` | 按设计稿宽度（375）截图 | 可选 `tabId` |
+| `screenshot_design_width` | 按 Figma 根节点宽度截图（传入 width，375 或 390） | 可选 `tabId`；比对必须传 `width` |
 | `get_dom_snapshot` | DOM 几何 / 样式快照 | 可选 `tabId` |
 | `get_network_requests` | 读取 fetch/XHR + webRequest 缓存 | 可选 `tabId` |
 | `snapshot` | 可访问性快照，返回稳定 ref（e1/e2…） | 可选 `tabId`（Chii 需 Panel） |
@@ -85,6 +87,8 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | `get_api_document` | 查询指定接口的参考文档（`generatedAt` 仅供参考） | 否；需 Panel 打开 |
 | `get_flow_nodes` | 查询当前流程节点与激活节点 | 否；需 Panel 打开 |
 | `manage_mock_config` | Mock 配置查询、增删改、开关及场景管理 | 否；写操作需文件夹授权 |
+
+`list_skills` / `get_skill` 从配套 Chrome 扩展拉取最新 Agent Skill 正文（例如 Figma 还原度比对）。业务流程以扩展返回为准，不要用本仓库里的旧副本。
 
 页面类工具默认操作当前激活 tab；传入 `tabId` 则操作指定页。可在扩展 Panel 点「复制 tabId」。
 

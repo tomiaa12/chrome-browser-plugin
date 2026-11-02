@@ -11,8 +11,8 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 ├── mcp.json                     # Cursor MCP → npx -y chrome-browser-plugin
 ├── .mcp.json                    # Copilot MCP → npx -y chrome-browser-plugin
 ├── skills/
-│   └── figma-page-compare/
-│       └── SKILL.md
+│   └── chrome-plugin-skills/
+│       └── SKILL.md          # 引导：用前必须从 Chrome 扩展拉最新 skill
 ├── mcp/                         # npm 包 chrome-browser-plugin 源码
 │   ├── package.json
 │   ├── server.js
@@ -24,7 +24,7 @@ chrome-browser-plugin/             # 仓库根 = 插件根
 ## 包含能力
 
 - **MCP**：控制配套 Chrome 扩展（截图、DOM 快照、页面环境/用户/流程、接口详情与参考文档、手机号快捷登录、Mock 管理、`show_design_diffs` 等）
-- **Skill**：`figma-page-compare`（Figma ↔ 页面还原度比对）
+- **Skill**：`chrome-plugin-skills`（引导 Agent 先用 `list_skills` / `get_skill` 从配套 Chrome 扩展拉取最新业务 Skill；正文不在本仓库维护）
 
 ## 使用前
 
