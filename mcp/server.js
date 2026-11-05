@@ -550,10 +550,10 @@ function createMcpServer() {
     "set_design_width",
     {
       description:
-        "Enable design-size viewport (default 375×812) on a tab (tabId or current active tab) without screenshot.",
+        "Enable design-size viewport (default 390×812) on a tab (tabId or current active tab) without screenshot.",
       inputSchema: {
         tabId: optionalTabId,
-        width: z.number().int().optional().describe("Design width, default 375"),
+        width: z.number().int().optional().describe("Design width, default 390"),
         height: z.number().int().optional().describe("Design height, default 812"),
         timeoutMs: z.number().int().optional().describe("Default 30000"),
       },
@@ -572,14 +572,14 @@ function createMcpServer() {
     "screenshot_design_width",
     {
       description:
-        "Capture full-page PNG of a tab at the Figma frame width. Pass width from Figma metadata (375 or 390). Do not omit width and do not use the Panel 设计稿尺寸 checkbox (that checkbox is fixed at 375×812). If offsetWidth does not match width, enables mobile emulation at that width first.",
+        "Capture full-page PNG of a tab at the Figma frame width. Pass the actual root frame width from Figma metadata (commonly 375/390, any width OK). Do not omit width and do not use the Panel 设计稿尺寸 checkbox (that checkbox is fixed at 390×812). If offsetWidth does not match width, enables mobile emulation at that width first.",
       inputSchema: {
         tabId: optionalTabId,
         width: z
           .number()
           .int()
           .optional()
-          .describe("Figma root frame width, rounded. 375 or 390. Required for compare."),
+          .describe("Figma root frame width, rounded. Commonly 375/390; any width OK. Required for compare."),
         height: z
           .number()
           .int()
@@ -706,7 +706,7 @@ function createMcpServer() {
         darkSkin: z.boolean().optional(),
         designSize: z.boolean().optional(),
         mockEnabled: z.boolean().optional(),
-        width: z.number().int().optional().describe("Design viewport width, default 375"),
+        width: z.number().int().optional().describe("Design viewport width, default 390"),
         height: z.number().int().optional().describe("Design viewport height, default 812"),
         reload: z.boolean().optional().describe("Reload after storage-backed changes; default true"),
       },

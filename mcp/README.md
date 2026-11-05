@@ -60,7 +60,7 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | `show_design_diffs` | 推送截图+差异并打开 Panel 内 sl-dialog | 可选 `tabId` |
 | `run_automation` | 在目标页执行 Automation | 可选 `tabId` |
 | `screenshot_tab` | 整页截图 | 可选 `tabId` |
-| `screenshot_design_width` | 按 Figma 根节点宽度截图（传入 width，375 或 390） | 可选 `tabId`；比对必须传 `width` |
+| `screenshot_design_width` | 按 Figma 根节点实际宽度截图（传入 width，常见 375/390，不限） | 可选 `tabId`；比对必须传 `width` |
 | `get_dom_snapshot` | DOM 几何 / 样式快照 | 可选 `tabId` |
 | `get_network_requests` | 读取 fetch/XHR + webRequest 缓存 | 可选 `tabId` |
 | `snapshot` | 可访问性快照，返回稳定 ref（e1/e2…） | 可选 `tabId`（Chii 需 Panel） |
