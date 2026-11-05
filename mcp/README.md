@@ -50,7 +50,8 @@ VS Code 使用 `.vscode/mcp.json`（或用户级 MCP 配置），根键是 **`se
 | 工具 | 说明 | 需指定 tab |
 |------|------|----------------|
 | `ping` | 探活 | 否 |
-| `get_version` | 返回 MCP 服务名称与版本号（不依赖扩展） | 否 |
+| `get_version` | 实时读取本 MCP npm 包 `package.json` 版本（不依赖扩展） | 否 |
+| `get_extension_version` | 返回已连接 Chrome 扩展的 manifest 版本 | 否；需扩展已连接 |
 | `list_skills` | 列出配套 Chrome 扩展内维护的 Agent Skill 目录 | 否；需扩展已连接 |
 | `get_skill` | 按 id/name 拉取完整 Skill markdown | 否；需扩展已连接 |
 | `open_url` | 后台打开 URL（默认不抢焦点；后续必须带返回的 tabId） | 返回 `tabId` |

@@ -10565,6 +10565,7 @@ module.exports = __toCommonJS(server_exports);
 var import_node_child_process = require("node:child_process");
 var import_node_fs = require("node:fs");
 var import_promises = require("node:fs/promises");
+var import_node_module = require("node:module");
 var import_node_path = require("node:path");
 var import_node_url = require("node:url");
 
@@ -24662,27 +24663,55 @@ var WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 var WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
 var REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 3e4);
 var MCP_NAME = "chrome-browser-plugin";
-var MCP_VERSION = readMcpVersion();
+function readPackageJsonVersion(filePath) {
+  try {
+    const version2 = JSON.parse((0, import_node_fs.readFileSync)(filePath, "utf8")).version;
+    return typeof version2 === "string" && version2 ? version2 : "";
+  } catch (_) {
+    return "";
+  }
+}
 function readMcpVersion() {
+  const candidates = [];
+  const seen = /* @__PURE__ */ new Set();
+  const add = (p) => {
+    if (!p || seen.has(p)) return;
+    seen.add(p);
+    candidates.push(p);
+  };
+  for (const base of [
+    typeof process.argv[1] === "string" ? process.argv[1] : "",
+    (0, import_node_path.join)(process.cwd(), "package.json")
+  ]) {
+    if (!base) continue;
+    try {
+      add((0, import_node_module.createRequire)(base).resolve(`${MCP_NAME}/package.json`));
+    } catch (_) {
+    }
+  }
   const dirs = [];
   const metaUrl = import_meta.url;
   if (typeof metaUrl === "string" && metaUrl) {
-    dirs.push((0, import_node_path.dirname)((0, import_node_url.fileURLToPath)(metaUrl)));
+    try {
+      dirs.push((0, import_node_path.dirname)((0, import_node_url.fileURLToPath)(metaUrl)));
+    } catch (_) {
+    }
   }
   if (typeof process.argv[1] === "string" && process.argv[1]) {
     dirs.push((0, import_node_path.dirname)(process.argv[1]));
   }
-  const seen = /* @__PURE__ */ new Set();
   for (const here of dirs) {
-    for (const candidate of [(0, import_node_path.join)(here, "package.json"), (0, import_node_path.join)(here, "..", "package.json")]) {
-      if (seen.has(candidate)) continue;
-      seen.add(candidate);
-      try {
-        const version2 = JSON.parse((0, import_node_fs.readFileSync)(candidate, "utf8")).version;
-        if (typeof version2 === "string" && version2) return version2;
-      } catch (_) {
-      }
-    }
+    add((0, import_node_path.join)(here, "package.json"));
+    add((0, import_node_path.join)(here, "..", "package.json"));
+  }
+  for (const candidate of candidates) {
+    const version2 = readPackageJsonVersion(candidate);
+    if (version2) return version2;
+  }
+  try {
+    const built = "1.2.4";
+    if (typeof built === "string" && built) return built;
+  } catch (_) {
   }
   return "0.0.0";
 }
@@ -24920,7 +24949,7 @@ function toolText(data) {
 function createMcpServer() {
   const mcpServer = new McpServer({
     name: MCP_NAME,
-    version: MCP_VERSION
+    version: readMcpVersion()
   });
   const optionalTabId = numberType().int().optional().describe(
     "Chrome tab id. Omit to use the current active tab. Copy from the extension Panel \u300C\u590D\u5236 tabId\u300D."
@@ -24939,13 +24968,21 @@ function createMcpServer() {
   mcpServer.registerTool(
     "get_version",
     {
-      description: "Return this MCP server's name and version. Does not require the Chrome extension.",
+      description: "Return this MCP npm package name and version by reading package.json live. Does not require the Chrome extension.",
       inputSchema: {}
     },
     async () => toolText({
       name: MCP_NAME,
-      version: MCP_VERSION
+      version: readMcpVersion()
     })
+  );
+  mcpServer.registerTool(
+    "get_extension_version",
+    {
+      description: "Return the connected Chrome extension version from chrome.runtime.getManifest(). Requires the extension WebSocket.",
+      inputSchema: {}
+    },
+    async () => toolText(await sendToExtension("get_extension_version", {}))
   );
   mcpServer.registerTool(
     "list_skills",
@@ -25602,7 +25639,7 @@ async function main() {
   const mcpServer = createMcpServer();
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
-  log(`MCP stdio server started (${MCP_NAME} ${MCP_VERSION})`);
+  log(`MCP stdio server started (${MCP_NAME} ${readMcpVersion()})`);
   process.on("SIGINT", () => shutdown("SIGINT"));
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.stdin.on("end", () => shutdown("stdin end"));

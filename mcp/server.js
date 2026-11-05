@@ -5,6 +5,7 @@
 import { execFileSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -46,32 +47,69 @@ const WS_HOST = process.env.CHROME_MCP_WS_HOST || "127.0.0.1";
 const WS_PORT = Number(process.env.CHROME_MCP_WS_PORT || 9527);
 const REQUEST_TIMEOUT_MS = Number(process.env.CHROME_MCP_TIMEOUT_MS || 30000);
 const MCP_NAME = "chrome-browser-plugin";
-const MCP_VERSION = readMcpVersion();
 
+function readPackageJsonVersion(filePath) {
+  try {
+    const version = JSON.parse(readFileSync(filePath, "utf8")).version;
+    return typeof version === "string" && version ? version : "";
+  } catch (_) {
+    return "";
+  }
+}
+
+/** 每次调用实时读当前 npm 包 package.json，不缓存启动时的值 */
 function readMcpVersion() {
-  // esbuild 打成 CJS 后 import.meta.url 是空对象，不能拿去 fileURLToPath。
-  // 源码 ESM 用 import.meta.url；打包入口用 argv[1]（dist/server.cjs → 上一级 package.json）。
+  const candidates = [];
+  const seen = new Set();
+  const add = (p) => {
+    if (!p || seen.has(p)) return;
+    seen.add(p);
+    candidates.push(p);
+  };
+
+  // 1) 从运行入口 / cwd 解析本包 package.json（npx 场景最稳）
+  for (const base of [
+    typeof process.argv[1] === "string" ? process.argv[1] : "",
+    join(process.cwd(), "package.json"),
+  ]) {
+    if (!base) continue;
+    try {
+      add(createRequire(base).resolve(`${MCP_NAME}/package.json`));
+    } catch (_) {
+      /* try next */
+    }
+  }
+
+  // 2) 相对入口目录（源码 ESM / dist/server.cjs）
   const dirs = [];
   const metaUrl = import.meta.url;
   if (typeof metaUrl === "string" && metaUrl) {
-    dirs.push(dirname(fileURLToPath(metaUrl)));
+    try {
+      dirs.push(dirname(fileURLToPath(metaUrl)));
+    } catch (_) {
+      /* CJS 打包后 import.meta.url 可能不可用 */
+    }
   }
   if (typeof process.argv[1] === "string" && process.argv[1]) {
     dirs.push(dirname(process.argv[1]));
   }
-
-  const seen = new Set();
   for (const here of dirs) {
-    for (const candidate of [join(here, "package.json"), join(here, "..", "package.json")]) {
-      if (seen.has(candidate)) continue;
-      seen.add(candidate);
-      try {
-        const version = JSON.parse(readFileSync(candidate, "utf8")).version;
-        if (typeof version === "string" && version) return version;
-      } catch (_) {
-        /* try next */
-      }
-    }
+    add(join(here, "package.json"));
+    add(join(here, "..", "package.json"));
+  }
+
+  for (const candidate of candidates) {
+    const version = readPackageJsonVersion(candidate);
+    if (version) return version;
+  }
+
+  // 3) esbuild define 注入的构建期版本（仅回退）
+  try {
+    // eslint-disable-next-line no-undef
+    const built = __MCP_PKG_VERSION__;
+    if (typeof built === "string" && built) return built;
+  } catch (_) {
+    /* 源码直接跑、未 define 时忽略 */
   }
   return "0.0.0";
 }
@@ -371,7 +409,7 @@ function toolText(data) {
 function createMcpServer() {
   const mcpServer = new McpServer({
     name: MCP_NAME,
-    version: MCP_VERSION,
+    version: readMcpVersion(),
   });
 
   const optionalTabId = z
@@ -398,14 +436,24 @@ function createMcpServer() {
     "get_version",
     {
       description:
-        "Return this MCP server's name and version. Does not require the Chrome extension.",
+        "Return this MCP npm package name and version by reading package.json live. Does not require the Chrome extension.",
       inputSchema: {},
     },
     async () =>
       toolText({
         name: MCP_NAME,
-        version: MCP_VERSION,
+        version: readMcpVersion(),
       }),
+  );
+
+  mcpServer.registerTool(
+    "get_extension_version",
+    {
+      description:
+        "Return the connected Chrome extension version from chrome.runtime.getManifest(). Requires the extension WebSocket.",
+      inputSchema: {},
+    },
+    async () => toolText(await sendToExtension("get_extension_version", {})),
   );
 
   mcpServer.registerTool(
@@ -1216,7 +1264,7 @@ async function main() {
   const transport = new StdioServerTransport();
   await mcpServer.connect(transport);
 
-  log(`MCP stdio server started (${MCP_NAME} ${MCP_VERSION})`);
+  log(`MCP stdio server started (${MCP_NAME} ${readMcpVersion()})`);
 
   // Cursor 关/重启 MCP：stdio 断开或发信号时立刻释放 9527
   process.on("SIGINT", () => shutdown("SIGINT"));
