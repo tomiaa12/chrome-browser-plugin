@@ -692,6 +692,18 @@ function createMcpServer() {
           .string()
           .optional()
           .describe("DEPRECATED — ignored; extension uses cached page shot from screenshot_design_width"),
+        statusBarHeight: z
+          .number()
+          .optional()
+          .describe(
+            "Actual design-px height of the Figma mobile status bar. The page shot is shifted down by this. Omit or 0 if none. Do not hardcode 44.",
+          ),
+        titleBarHeight: z
+          .number()
+          .optional()
+          .describe(
+            "Actual design-px height of the Figma title/nav bar, only when that bar is absent on the H5 page. Added to the downward page-shot shift. 0 if the H5 already shows it.",
+          ),
         diffs: z
           .array(z.record(z.any()))
           .describe(

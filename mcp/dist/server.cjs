@@ -25171,6 +25171,12 @@ function createMcpServer() {
         ),
         figmaImageUrl: stringType().optional().describe("Optional mirror of the same Figma image URL; prefer also setting figmaImageBase64 to the URL"),
         pageImageBase64: stringType().optional().describe("DEPRECATED \u2014 ignored; extension uses cached page shot from screenshot_design_width"),
+        statusBarHeight: numberType().optional().describe(
+          "Actual design-px height of the Figma mobile status bar. The page shot is shifted down by this. Omit or 0 if none. Do not hardcode 44."
+        ),
+        titleBarHeight: numberType().optional().describe(
+          "Actual design-px height of the Figma title/nav bar, only when that bar is absent on the H5 page. Added to the downward page-shot shift. 0 if the H5 already shows it."
+        ),
         diffs: arrayType(recordType(anyType())).describe(
           "Mismatched nodes: [{ selector, figmaNodeId?, figmaName?, note?, issues: [{ prop, actual, expected, unit? }] }]. Dedupe same-pattern issues; ignore gapBelow<0 and \u22641px noise."
         )
